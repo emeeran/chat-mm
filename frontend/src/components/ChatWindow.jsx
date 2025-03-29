@@ -272,12 +272,36 @@ const ChatWindow = () => {
             />
           ))}
         </AnimatePresence>
+        
+        {/* Status message moved here from input area */}
+        {isConnected && messages.length > 0 && (
+          <Box 
+            sx={{ 
+              mt: 2,
+              mb: 1,
+              display: 'flex', 
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 0.5,
+              opacity: 0.7
+            }}
+          >
+            <InfoIcon fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.9rem' }} />
+            <Typography 
+              variant="caption" 
+              color="text.secondary"
+            >
+              Using {getStatusText()}
+            </Typography>
+          </Box>
+        )}
+        
         <div ref={messagesEndRef} />
       </Box>
 
-      {/* Input area */}
+      {/* Input area - Now fixed to bottom */}
       <Paper
-        elevation={0}
+        elevation={3}
         sx={{
           p: 2,
           borderTop: `1px solid ${theme.palette.divider}`,
@@ -286,6 +310,10 @@ const ChatWindow = () => {
             : alpha(theme.palette.background.paper, 0.8),
           backdropFilter: 'blur(8px)',
           zIndex: 10,
+          position: 'sticky',
+          bottom: 0,
+          left: 0,
+          right: 0,
         }}
       >
         <Box 
@@ -565,26 +593,6 @@ const ChatWindow = () => {
             </Button>
           </Box>
         </form>
-        
-        {isConnected && (
-          <Box 
-            sx={{ 
-              mt: 1, 
-              display: 'flex', 
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 0.5 
-            }}
-          >
-            <InfoIcon fontSize="small" sx={{ color: 'text.secondary', fontSize: '1rem' }} />
-            <Typography 
-              variant="caption" 
-              color="text.secondary"
-            >
-              Using {getStatusText()}
-            </Typography>
-          </Box>
-        )}
       </Paper>
 
       {/* Snackbar for notifications */}
