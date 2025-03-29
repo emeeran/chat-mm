@@ -2,7 +2,7 @@ import os
 from typing import Any, Dict, List, Optional, Iterator, Sequence
 from langchain_openai import ChatOpenAI
 from langchain_community.llms import Cohere
-from langchain_community.llms.huggingface_hub import HuggingFaceHub
+from langchain_huggingface import HuggingFaceEndpoint
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.callbacks.base import BaseCallbackManager
 from langchain_core.callbacks import CallbackManagerForLLMRun, Callbacks
@@ -69,16 +69,31 @@ class CohereClientV2Wrapper(LLM):
             
             text = ""
             for chunk in stream_response:
-                if not chunk.event_type == "text-generation":
+                # Check if the chunk is a text generation or a message chunk
+                if hasattr(chunk, 'event_type') and chunk.event_type == "text-generation":
+                    chunk_text = chunk.text
+                # Handle MessageStreamEvent from newer Cohere SDK versions
+                elif hasattr(chunk, 'text'):
+                    chunk_text = chunk.text
+                # Handle the case where chunk is a MessageStartStreamedChatResponseV2 or other object
+                elif hasattr(chunk, 'message') and hasattr(chunk.message, 'content'):
+                    if chunk.message.content and len(chunk.message.content) > 0:
+                        chunk_text = chunk.message.content[0].text
+                    else:
+                        continue
+                # Handle delta-based streaming (similar to OpenAI format)
+                elif hasattr(chunk, 'delta') and hasattr(chunk.delta, 'text'):
+                    chunk_text = chunk.delta.text
+                # Skip if we can't find content in this chunk
+                else:
                     continue
-                    
-                chunk_text = chunk.text
-                text += chunk_text
                 
-                chunk = GenerationChunk(text=chunk_text)
-                if run_manager:
-                    run_manager.on_llm_new_token(chunk_text)
-                yield chunk
+                if chunk_text:
+                    text += chunk_text
+                    chunk = GenerationChunk(text=chunk_text)
+                    if run_manager:
+                        run_manager.on_llm_new_token(chunk_text)
+                    yield chunk
         except Exception as e:
             error_msg = f"Error streaming from Cohere API: {str(e)}"
             logger.error(error_msg)
@@ -789,14 +804,24 @@ class LLMFactory:
         if not api_key:
             raise ValueError("No HuggingFace API key found. Please set HF_API_KEY or HUGGINGFACE_API_KEY in your environment.")
         
-        # HuggingFace doesn't support streaming in the same way
-        streaming_arg = {} if not streaming else {"streaming": True}
-        
-        return HuggingFaceHub(
-            repo_id=model_id,
-            huggingfacehub_api_token=api_key,
-            model_kwargs={"temperature": 0.7, **streaming_arg}
-        )
+        try:
+            # HuggingFaceEndpoint supports streaming differently
+            streaming_arg = {} if not streaming else {"streaming": True}
+            
+            # Use HuggingFaceEndpoint instead of the deprecated HuggingFaceHub
+            return HuggingFaceEndpoint(
+                endpoint_url=f"https://api-inference.huggingface.co/models/{model_id}",
+                huggingfacehub_api_token=api_key,
+                task="text-generation",
+                model_kwargs={
+                    "temperature": 0.7,
+                    "max_new_tokens": 1024,
+                    **streaming_arg
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error initializing HuggingFace endpoint: {str(e)}")
+            raise ValueError(f"Failed to initialize HuggingFace endpoint: {str(e)}")
     
     def _create_groq(self, model_id='llama-3.3-70b-versatile', streaming=True):
         """Create a Groq LLM instance"""

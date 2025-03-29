@@ -28,7 +28,11 @@ import {
   Info as InfoIcon,
   Warning as WarningIcon,
   MenuBook as MenuBookIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Refresh as RetryIcon,
+  Add as NewIcon,
+  Save as SaveIcon,
+  FileOpen as LoadIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../services/socketContext';
@@ -46,7 +50,7 @@ const ChatWindow = () => {
   ]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [provider, setProvider] = useState('openai');
+  const [provider, setProvider] = useState('groq');
   const [modelId, setModelId] = useState(null);
   const [availableModels, setAvailableModels] = useState({});
   const [mode, setMode] = useState('llm'); // Default to LLM-only mode
@@ -381,17 +385,149 @@ const ChatWindow = () => {
             </FormControl>
           </Box>
           
-          <Tooltip title="Clear conversation">
-            <span>
-              <IconButton
-                onClick={handleClearChat}
-                color="primary"
-                disabled={messages.length <= 1 || isStreaming}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {/* New Chat button */}
+            <Tooltip title="New Chat">
+              <span>
+                <IconButton
+                  onClick={handleClearChat}
+                  color="primary"
+                  disabled={isStreaming}
+                >
+                  <NewIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            
+            {/* Retry Last Query button */}
+            <Tooltip title="Retry Last Query">
+              <span>
+                <IconButton
+                  onClick={() => {
+                    // Find the last user message
+                    const lastUserMessage = [...messages].reverse().find(msg => msg.type === 'user');
+                    if (lastUserMessage) {
+                      setInput(lastUserMessage.text);
+                    }
+                  }}
+                  color="primary"
+                  disabled={isStreaming || !messages.some(msg => msg.type === 'user')}
+                >
+                  <RetryIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            
+            {/* Save Chat button */}
+            <Tooltip title="Save Chat">
+              <span>
+                <IconButton
+                  onClick={() => {
+                    // Create a JSON representation of the chat
+                    const chatData = {
+                      messages: messages,
+                      timestamp: new Date().toISOString(),
+                      provider,
+                      model: modelId
+                    };
+                    
+                    // Convert to a string and create a download link
+                    const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `chat-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    setSnackbar({
+                      open: true,
+                      message: 'Chat saved successfully!',
+                      severity: 'success'
+                    });
+                  }}
+                  color="primary"
+                  disabled={isStreaming || messages.length <= 1}
+                >
+                  <SaveIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            
+            {/* Load Chat button */}
+            <Tooltip title="Load Chat">
+              <span>
+                <IconButton
+                  onClick={() => {
+                    // Create an input element to select a file
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    
+                    input.onchange = (e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const chatData = JSON.parse(event.target.result);
+                            if (chatData.messages && Array.isArray(chatData.messages)) {
+                              setMessages(chatData.messages);
+                              
+                              // Set provider and model if available
+                              if (chatData.provider && availableModels[chatData.provider]) {
+                                setProvider(chatData.provider);
+                                
+                                if (chatData.model && availableModels[chatData.provider]?.some(m => m.id === chatData.model)) {
+                                  setModelId(chatData.model);
+                                } else if (availableModels[chatData.provider].length > 0) {
+                                  setModelId(availableModels[chatData.provider][0].id);
+                                }
+                              }
+                              
+                              setSnackbar({
+                                open: true,
+                                message: 'Chat loaded successfully!',
+                                severity: 'success'
+                              });
+                            } else {
+                              throw new Error('Invalid chat data format');
+                            }
+                          } catch (err) {
+                            setSnackbar({
+                              open: true,
+                              message: `Error loading chat: ${err.message}`,
+                              severity: 'error'
+                            });
+                          }
+                        };
+                        reader.readAsText(file);
+                      }
+                    };
+                    
+                    input.click();
+                  }}
+                  color="primary"
+                  disabled={isStreaming}
+                >
+                  <LoadIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            
+            {/* Delete Chat button (already exists) */}
+            <Tooltip title="Clear conversation">
+              <span>
+                <IconButton
+                  onClick={handleClearChat}
+                  color="primary"
+                  disabled={messages.length <= 1 || isStreaming}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
         </Box>
         
         <form onSubmit={handleSubmit}>
