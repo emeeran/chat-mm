@@ -32,7 +32,8 @@ import {
   Refresh as RetryIcon,
   Add as NewIcon,
   Save as SaveIcon,
-  FileOpen as LoadIcon
+  FileOpen as LoadIcon,
+  FileDownload as ExportIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../services/socketContext';
@@ -478,6 +479,47 @@ const ChatWindow = () => {
                   disabled={isStreaming || messages.length <= 1}
                 >
                   <SaveIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            
+            {/* Export Chat button */}
+            <Tooltip title="Export Chat as Text">
+              <span>
+                <IconButton
+                  onClick={() => {
+                    // Create a plain text representation of the chat
+                    const chatText = messages
+                      .filter(msg => msg.type !== 'info') // Filter out info messages
+                      .map(msg => {
+                        const role = msg.type === 'user' ? 'User' : 'AI';
+                        return `${role}: ${msg.text}`;
+                      })
+                      .join('\n\n');
+                    
+                    // Add metadata at the top
+                    const metadata = `Chat Export - ${new Date().toLocaleString()}\nModel: ${getProviderName(provider)} ${getModelName()}\n\n`;
+                    const fullText = metadata + chatText;
+                    
+                    // Create and trigger download
+                    const blob = new Blob([fullText], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `chat-export-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    setSnackbar({
+                      open: true,
+                      message: 'Chat exported as text successfully!',
+                      severity: 'success'
+                    });
+                  }}
+                  color="primary"
+                  disabled={isStreaming || messages.length <= 1}
+                >
+                  <ExportIcon />
                 </IconButton>
               </span>
             </Tooltip>
