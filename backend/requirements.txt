@@ -1,0 +1,14 @@
+flask
+flask-socketio
+flask-cors
+python-dotenv
+langchain
+faiss-cpu
+transformers
+torch
+beautifulsoup4
+requests
+duckduckgo-search
+huggingface-hub
+sentence-transformers
+eventlet

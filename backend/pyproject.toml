@@ -1,0 +1,23 @@
+[project]
+name = "rag-chat"
+version = "0.1.0"
+dependencies = [
+    "flask",
+    "flask-socketio",
+    "flask-cors",
+    "python-dotenv",
+    "langchain",
+    "faiss-cpu",
+    "transformers",
+    "torch",
+    "beautifulsoup4",
+    "requests",
+    "duckduckgo-search",
+    "huggingface-hub",
+    "sentence-transformers",
+    "eventlet"
+]
+
+[build-system]
+requires = ["uv"]
+build-backend = "uv.build" 
