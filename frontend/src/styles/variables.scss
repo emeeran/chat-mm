@@ -1,0 +1,60 @@
+// Variables for the application
+// This file is imported automatically into every SCSS file via Vite config
+
+// Colors
+$primary-color: #2196f3;
+$secondary-color: #f50057;
+$background-light: #f5f5f5;
+$background-dark: #121212;
+$text-light: rgba(0, 0, 0, 0.87);
+$text-dark: rgba(255, 255, 255, 0.87);
+
+// Breakpoints
+$breakpoint-xs: 0px;
+$breakpoint-sm: 600px;
+$breakpoint-md: 960px;
+$breakpoint-lg: 1280px;
+$breakpoint-xl: 1920px;
+
+// Spacing
+$spacing-unit: 8px;
+$spacing-xs: $spacing-unit;
+$spacing-sm: $spacing-unit * 2;
+$spacing-md: $spacing-unit * 3;
+$spacing-lg: $spacing-unit * 4;
+$spacing-xl: $spacing-unit * 5;
+
+// Transitions
+$transition-fast: 0.2s;
+$transition-medium: 0.3s;
+$transition-slow: 0.5s;
+
+// Border radius
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 16px;
+$border-radius-xl: 24px;
+
+// Shadows
+$shadow-light-1: 0 2px 4px rgba(0, 0, 0, 0.05);
+$shadow-light-2: 0 4px 8px rgba(0, 0, 0, 0.1);
+$shadow-dark-1: 0 2px 4px rgba(0, 0, 0, 0.2);
+$shadow-dark-2: 0 4px 8px rgba(0, 0, 0, 0.4);
+
+// Fonts
+$font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+$font-size-base: 16px;
+$font-size-xs: 0.75rem;
+$font-size-sm: 0.875rem;
+$font-size-md: 1rem;
+$font-size-lg: 1.25rem;
+$font-size-xl: 1.5rem;
+
+// Z-index levels
+$z-index-dropdown: 1000;
+$z-index-sticky: 1100;
+$z-index-fixed: 1200;
+$z-index-modal-backdrop: 1300;
+$z-index-modal: 1400;
+$z-index-popover: 1500;
+$z-index-tooltip: 1600; 
