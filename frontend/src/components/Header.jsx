@@ -22,14 +22,17 @@ import {
   Info as InfoIcon,
   CloudDone as CloudIcon,
   Psychology as AIIcon,
-  SmartToy as RobotIcon
+  SmartToy as RobotIcon,
+  WifiOff as DisconnectedIcon,
+  SignalWifi4Bar as ConnectedIcon
 } from '@mui/icons-material';
 
 const Header = ({ 
   toggleSidebar, 
   darkMode, 
   toggleDarkMode, 
-  isConnected = true
+  isConnected = true,
+  onToggleSidebar
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -58,7 +61,7 @@ const Header = ({
             <IconButton 
               color="inherit" 
               edge="start" 
-              onClick={toggleSidebar}
+              onClick={onToggleSidebar}
               sx={{ mr: 1 }}
             >
               <MenuIcon />
@@ -138,6 +141,26 @@ const Header = ({
               </Badge>
             </Tooltip>
           )}
+          
+          <Tooltip title={isConnected ? "Connected to server" : "Disconnected from server"}>
+            <IconButton 
+              size="small" 
+              color={isConnected ? "success" : "error"}
+              sx={{
+                border: `1px solid ${isConnected ? theme.palette.success.main : theme.palette.error.main}`,
+                opacity: 0.8,
+                mr: 1,
+                '&:hover': {
+                  backgroundColor: alpha(
+                    isConnected ? theme.palette.success.main : theme.palette.error.main,
+                    0.1
+                  ),
+                },
+              }}
+            >
+              {isConnected ? <ConnectedIcon fontSize="small" /> : <DisconnectedIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
           
           <Tooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
             <IconButton 

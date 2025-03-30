@@ -20,6 +20,8 @@ import {
   Tooltip,
   alpha,
   Badge,
+  Paper,
+  Chip,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -36,6 +38,9 @@ import {
   FileUpload as LoadIcon,
   DeleteForever as ClearIcon,
   Info as InfoIcon,
+  Keyboard as KeyboardIcon,
+  RestartAlt as ResetIcon,
+  HelpOutline as HelpIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 
@@ -59,6 +64,8 @@ const Sidebar = ({
   onRetry,
   isStreaming,
   providerWarnings,
+  responseMetadata,
+  isConnected,
 }) => {
   const theme = useTheme();
   
@@ -86,7 +93,7 @@ const Sidebar = ({
       variant="temporary"
       PaperProps={{
         sx: {
-          width: { xs: '80%', sm: 320 },
+          width: { xs: '85%', sm: 350 },
           p: 2,
           backgroundColor: theme.palette.background.paper,
           backgroundImage: 'none',
@@ -97,12 +104,72 @@ const Sidebar = ({
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6" fontWeight="bold" color="primary">
-          Settings
+          Chat Settings
         </Typography>
-        <IconButton onClick={onClose} color="inherit" edge="end">
-          <CloseIcon />
-        </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Chip
+            size="small"
+            label={isConnected ? "Connected" : "Disconnected"}
+            color={isConnected ? "success" : "error"}
+            variant="outlined"
+            sx={{ 
+              mr: 1,
+              height: 24,
+              fontSize: '0.7rem',
+              '& .MuiChip-label': { px: 1, py: 0.5 }
+            }}
+          />
+          <IconButton onClick={onClose} color="inherit" edge="end">
+            <CloseIcon />
+          </IconButton>
+        </Box>
       </Box>
+      
+      {/* Connection status & response metadata */}
+      {responseMetadata && (
+        <Paper
+          elevation={0}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            p: 1.5,
+            mb: 2,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.info.main, 0.08),
+            border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+            color: theme.palette.text.secondary,
+            fontSize: '0.75rem',
+          }}
+        >
+          <Typography variant="subtitle2" color="primary" gutterBottom>
+            <InfoIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
+            Current Session
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {responseMetadata.model && (
+              <Chip 
+                size="small" 
+                label={`Model: ${responseMetadata.model}`}
+                sx={{ fontSize: '0.7rem' }}
+              />
+            )}
+            {responseMetadata.tokens && (
+              <Chip 
+                size="small" 
+                label={`Tokens: ${responseMetadata.tokens}`}
+                sx={{ fontSize: '0.7rem' }}
+              />
+            )}
+            {responseMetadata.time && (
+              <Chip 
+                size="small" 
+                label={`Time: ${responseMetadata.time}s`}
+                sx={{ fontSize: '0.7rem' }}
+              />
+            )}
+          </Box>
+        </Paper>
+      )}
       
       <Divider sx={{ mb: 2 }} />
       
@@ -199,126 +266,117 @@ const Sidebar = ({
         </Select>
       </FormControl>
       
+      {/* Appearance */}
+      <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
+        Appearance
+      </Typography>
+      
+      <FormControlLabel
+        control={
+          <Switch
+            checked={darkMode}
+            onChange={toggleDarkMode}
+            size="small"
+          />
+        }
+        label={
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {darkMode ? 
+              <LightModeIcon fontSize="small" sx={{ mr: 1 }} /> : 
+              <DarkModeIcon fontSize="small" sx={{ mr: 1 }} />
+            }
+            <Typography variant="body2">
+              {darkMode ? 'Light Mode' : 'Dark Mode'}
+            </Typography>
+          </Box>
+        }
+        sx={{ mb: 2 }}
+      />
+      
+      <Divider sx={{ mb: 2 }} />
+      
       {/* Actions */}
       <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
         Actions
       </Typography>
       
-      <Box 
-        sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 1,
-          mb: 3
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<NewIcon />}
+          onClick={onNewChat}
+          disabled={isStreaming}
+          sx={{ borderRadius: 6 }}
+        >
+          New Chat
+        </Button>
+        
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<ClearIcon />}
+          onClick={onClearChat}
+          disabled={isStreaming}
+          color="error"
+          sx={{ borderRadius: 6 }}
+        >
+          Clear
+        </Button>
+        
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<RetryIcon />}
+          onClick={onRetry}
+          disabled={isStreaming}
+          sx={{ borderRadius: 6 }}
+        >
+          Retry Last
+        </Button>
+        
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<ExportIcon />}
+          onClick={onExportChat}
+          disabled={isStreaming}
+          sx={{ borderRadius: 6 }}
+        >
+          Export
+        </Button>
+      </Box>
+      
+      {/* Keyboard shortcuts */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 1.5,
+          mt: 1,
+          mb: 2,
+          borderRadius: 2,
+          bgcolor: alpha(theme.palette.background.default, 0.5),
+          border: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <Tooltip title="New Chat">
-          <span>
-            <IconButton
-              onClick={onNewChat}
-              disabled={isStreaming}
-              color="primary"
-              size="large"
-            >
-              <NewIcon />
-            </IconButton>
-          </span>
-        </Tooltip>
-        
-        <Tooltip title="Save Chat">
-          <span>
-            <IconButton
-              onClick={onSaveChat}
-              disabled={isStreaming}
-              color="primary"
-              size="large"
-            >
-              <SaveIcon />
-            </IconButton>
-          </span>
-        </Tooltip>
-        
-        <Tooltip title="Load Chat">
-          <span>
-            <IconButton
-              onClick={onLoadChat}
-              disabled={isStreaming}
-              color="primary"
-              size="large"
-            >
-              <LoadIcon />
-            </IconButton>
-          </span>
-        </Tooltip>
-        
-        <Tooltip title="Export Chat">
-          <span>
-            <IconButton
-              onClick={onExportChat}
-              disabled={isStreaming}
-              color="primary"
-              size="large"
-            >
-              <ExportIcon />
-            </IconButton>
-          </span>
-        </Tooltip>
-        
-        <Tooltip title="Clear Chat">
-          <span>
-            <IconButton
-              onClick={onClearChat}
-              disabled={isStreaming}
-              color="primary"
-              size="large"
-            >
-              <ClearIcon />
-            </IconButton>
-          </span>
-        </Tooltip>
-        
-        <Tooltip title="Retry Last">
-          <span>
-            <IconButton
-              onClick={onRetry}
-              disabled={isStreaming}
-              color="primary"
-              size="large"
-            >
-              <RetryIcon />
-            </IconButton>
-          </span>
-        </Tooltip>
-      </Box>
+        <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <KeyboardIcon fontSize="small" sx={{ mr: 1 }} />
+          Keyboard Shortcuts
+        </Typography>
+        <Box component="ul" sx={{ m: 0, pl: 2, fontSize: '0.8rem' }}>
+          <li><strong>Alt+Enter</strong>: Send message</li>
+          <li><strong>Ctrl+L</strong>: Clear chat</li>
+          <li><strong>Ctrl+D</strong>: Toggle dark mode</li>
+          <li><strong>Ctrl+,</strong>: Toggle sidebar</li>
+        </Box>
+      </Paper>
       
-      <Box sx={{ flexGrow: 1 }} />
-      
-      <Divider sx={{ my: 2 }} />
-      
-      {/* Settings */}
-      <Box sx={{ mb: 2 }}>
-        <FormControlLabel
-          control={
-            <Switch 
-              checked={darkMode} 
-              onChange={toggleDarkMode}
-              color="primary"
-            />
-          }
-          label={
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {darkMode ? <DarkModeIcon fontSize="small" /> : <LightModeIcon fontSize="small" />}
-              <Typography>{darkMode ? "Dark Mode" : "Light Mode"}</Typography>
-            </Box>
-          }
-        />
-      </Box>
-      
-      {/* App version */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.7 }}>
-        <InfoIcon fontSize="small" sx={{ mr: 1, opacity: 0.6 }} />
-        <Typography variant="caption" color="text.secondary">
-          Chat-MM v1.0.0
+      <Box sx={{ mt: 'auto', textAlign: 'center', opacity: 0.7 }}>
+        <Typography variant="caption" display="block" gutterBottom>
+          Chat-MM v0.1.0
+        </Typography>
+        <Typography variant="caption">
+          A multimodal chat application
         </Typography>
       </Box>
     </Drawer>
