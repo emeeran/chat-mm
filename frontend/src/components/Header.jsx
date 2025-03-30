@@ -62,9 +62,9 @@ const Header = () => {
               mr: 1
             }}
           >
-            R
+            C
           </Box>
-          RAG Chat
+          Chat-MM
           
           <Chip 
             label={isConnected ? "Connected" : connectionError ? "Error" : "Disconnected"} 

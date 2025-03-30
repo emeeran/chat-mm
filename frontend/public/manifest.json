@@ -1,6 +1,6 @@
 {
-  "short_name": "RAG Chat",
-  "name": "RAG Chat Application",
+  "short_name": "Chat-MM",
+  "name": "Chat-MM Application",
   "icons": [
     {
       "src": "favicon.ico",
