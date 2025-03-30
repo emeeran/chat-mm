@@ -1,27 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, CssBaseline } from '@mui/material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import Header from './components/Header';
 import ChatWindow from './components/ChatWindow';
 import { SocketProvider } from './services/socketContext';
 
 function App() {
+  const [darkMode, setDarkMode] = useState(false);
+  
+  const theme = createTheme({
+    palette: {
+      mode: darkMode ? 'dark' : 'light',
+    },
+  });
+
   return (
-    <SocketProvider>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          height: '100vh',
-          background: theme => theme.palette.mode === 'dark' 
-            ? 'linear-gradient(to bottom, #0f172a, #1e293b)'
-            : 'linear-gradient(to bottom, #f8fafc, #e2e8f0)'
-        }}
-      >
-        <Header />
-        <ChatWindow />
-      </Box>
-    </SocketProvider>
+      <SocketProvider>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: '100vh',
+            bgcolor: 'background.default',
+          }}
+        >
+          <Header />
+          <ChatWindow />
+        </Box>
+      </SocketProvider>
+    </ThemeProvider>
   );
 }
 

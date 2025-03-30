@@ -10,16 +10,12 @@ import {
   useTheme
 } from '@mui/material';
 import { 
-  DarkMode as DarkModeIcon, 
-  LightMode as LightModeIcon,
   GitHub as GitHubIcon
 } from '@mui/icons-material';
-import { useColorMode } from '../theme/ThemeProvider';
 import { useSocket } from '../services/socketContext';
 
 const Header = () => {
   const theme = useTheme();
-  const colorMode = useColorMode();
   const { isConnected, connectionError } = useSocket();
   
   return (
@@ -35,18 +31,25 @@ const Header = () => {
           : 'rgba(255, 255, 255, 0.8)',
       }}
     >
-      <Toolbar>
-        <Typography 
-          variant="h6" 
-          component="div" 
-          sx={{ 
-            flexGrow: 1,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}
-        >
+      <Toolbar sx={{ position: 'relative' }}>
+        {/* Connection status on the left */}
+        <Box sx={{ position: 'absolute', left: 16, display: 'flex', alignItems: 'center' }}>
+          <Chip 
+            label={isConnected ? "Connected" : connectionError ? "Error" : "Disconnected"} 
+            size="small"
+            color={isConnected ? "success" : connectionError ? "error" : "default"}
+          />
+        </Box>
+        
+        {/* Centered title */}
+        <Box sx={{ 
+          position: 'absolute', 
+          left: '50%', 
+          top: '50%', 
+          transform: 'translate(-50%, -50%)',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
           <Box 
             component="span" 
             sx={{ 
@@ -64,17 +67,17 @@ const Header = () => {
           >
             C
           </Box>
-          Chat-MM
-          
-          <Chip 
-            label={isConnected ? "Connected" : connectionError ? "Error" : "Disconnected"} 
-            size="small"
-            color={isConnected ? "success" : connectionError ? "error" : "default"}
-            sx={{ ml: 2 }}
-          />
-        </Typography>
+          <Typography 
+            variant="h6" 
+            component="div" 
+            sx={{ fontWeight: 700 }}
+          >
+            Chat-MM
+          </Typography>
+        </Box>
         
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        {/* GitHub button on the right */}
+        <Box sx={{ position: 'absolute', right: 16 }}>
           <Button 
             variant="outlined" 
             color="inherit" 
@@ -82,18 +85,9 @@ const Header = () => {
             startIcon={<GitHubIcon />}
             href="https://github.com"
             target="_blank"
-            sx={{ mr: 1 }}
           >
             GitHub
           </Button>
-          
-          <IconButton 
-            onClick={colorMode.toggleColorMode} 
-            color="inherit"
-            aria-label="toggle dark mode"
-          >
-            {theme.palette.mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
-          </IconButton>
         </Box>
       </Toolbar>
     </AppBar>

@@ -61,21 +61,36 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
     switch (message.type) {
       case 'user':
         return theme.palette.mode === 'dark' 
-          ? alpha(theme.palette.primary.dark, 0.2)
-          : alpha(theme.palette.primary.light, 0.1);
+          ? alpha(theme.palette.primary.dark, 0.1)
+          : alpha(theme.palette.primary.light, 0.05);
       case 'bot':
-        return theme.palette.mode === 'dark'
-          ? alpha(theme.palette.background.paper, 0.6)
-          : alpha(theme.palette.background.paper, 0.6);
+        return 'transparent';
       case 'error':
         return theme.palette.mode === 'dark'
-          ? alpha(theme.palette.error.dark, 0.2)
-          : alpha(theme.palette.error.light, 0.1);
+          ? alpha(theme.palette.error.dark, 0.1)
+          : alpha(theme.palette.error.light, 0.05);
       case 'info':
       default:
         return theme.palette.mode === 'dark'
-          ? alpha(theme.palette.info.dark, 0.2)
-          : alpha(theme.palette.info.light, 0.1);
+          ? alpha(theme.palette.info.dark, 0.1)
+          : alpha(theme.palette.info.light, 0.05);
+    }
+  };
+
+  const getBorderColor = () => {
+    switch (message.type) {
+      case 'user':
+        return theme.palette.primary.main;
+      case 'bot':
+        return theme.palette.mode === 'dark' 
+          ? alpha(theme.palette.divider, 0.2)
+          : alpha(theme.palette.divider, 0.5);
+      case 'error':
+        return theme.palette.error.main;
+      case 'info':
+        return theme.palette.info.main;
+      default:
+        return theme.palette.divider;
     }
   };
 
@@ -93,15 +108,15 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
   const getIcon = () => {
     switch (message.type) {
       case 'user':
-        return <PersonIcon aria-hidden="true" />;
+        return <PersonIcon aria-hidden="true" fontSize="small" />;
       case 'bot':
-        return <BotIcon aria-hidden="true" />;
+        return <BotIcon aria-hidden="true" fontSize="small" />;
       case 'error':
-        return <ErrorIcon aria-hidden="true" />;
+        return <ErrorIcon aria-hidden="true" fontSize="small" />;
       case 'info':
-        return <InfoIcon aria-hidden="true" />;
+        return <InfoIcon aria-hidden="true" fontSize="small" />;
       default:
-        return <BotIcon aria-hidden="true" />;
+        return <BotIcon aria-hidden="true" fontSize="small" />;
     }
   };
 
@@ -122,12 +137,12 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
   };
 
   const variants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 10 },
     visible: { 
       opacity: 1, 
       y: 0,
       transition: { 
-        duration: 0.3,
+        duration: 0.2,
         type: "spring",
         stiffness: 100
       }
@@ -150,23 +165,23 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
       layout
     >
       <Paper
-        elevation={message.type === 'error' ? 2 : 0}
+        elevation={0}
         sx={{
           p: 2,
-          mb: 2,
-          mx: 2,
-          borderRadius: theme.shape.borderRadius * 1.5,
+          mb: 1.5,
+          mx: { xs: 0, sm: 1 },
+          borderRadius: 2,
           backgroundColor: getBgColor(),
-          borderLeft: message.type === 'user' ? `4px solid ${theme.palette.primary.main}` : 'none',
-          borderRight: message.type === 'bot' ? `4px solid ${theme.palette.secondary.main}` : 'none',
+          border: `1px solid ${getBorderColor()}`,
           maxWidth: '100%',
           wordBreak: 'break-word',
-          boxShadow: message.type === 'error' ? `0 0 5px ${theme.palette.error.main}` : 'none',
-          display: 'flex',
-          flexDirection: 'column',
           position: 'relative',
-          '&:hover .message-actions': {
-            opacity: 1
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': {
+            boxShadow: 1,
+            '.message-actions': {
+              opacity: 1
+            }
           }
         }}
       >
@@ -178,27 +193,43 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 28,
-                height: 28,
+                width: 24,
+                height: 24,
                 borderRadius: '50%',
-                bgcolor: alpha(getTextColor(), 0.1)
+                bgcolor: message.type === 'user' 
+                  ? alpha(theme.palette.primary.main, 0.1)
+                  : message.type === 'bot'
+                    ? alpha(theme.palette.secondary.main, 0.1)
+                    : alpha(getTextColor(), 0.1),
+                color: message.type === 'user'
+                  ? theme.palette.primary.main
+                  : message.type === 'bot'
+                    ? theme.palette.secondary.main
+                    : getTextColor()
               }}
             >
               {getIcon()}
             </Box>
-            <Chip
-              label={getRoleLabel()}
-              size="small"
-              color={message.type === 'error' ? 'error' : message.type === 'info' ? 'info' : message.type === 'user' ? 'primary' : 'secondary'}
-              variant="outlined"
-              sx={{ height: 24, fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.7rem' }}
-            />
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                fontWeight: 'bold', 
+                color: message.type === 'user'
+                  ? theme.palette.primary.main
+                  : message.type === 'bot'
+                    ? theme.palette.secondary.main
+                    : getTextColor()
+              }}
+            >
+              {getRoleLabel()}
+            </Typography>
+            
             {isStreaming && (
               <Box 
                 component="span" 
                 sx={{ 
-                  width: 8, 
-                  height: 8, 
+                  width: 6, 
+                  height: 6, 
                   borderRadius: '50%', 
                   bgcolor: theme.palette.success.main,
                   display: 'inline-block',
@@ -230,8 +261,6 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
           )}
         </Box>
         
-        <Divider sx={{ mb: 1.5 }} />
-        
         {/* Message actions - only visible on hover */}
         {message.type !== 'info' && (
           <Box 
@@ -254,7 +283,6 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
                 size="small"
                 onClick={handleCopyMessage}
                 color={copied ? "success" : "default"}
-                aria-label="Copy message text"
               >
                 {copied ? <CopySuccessIcon fontSize="small" /> : <CopyIcon fontSize="small" />}
               </IconButton>
@@ -262,103 +290,158 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
           </Box>
         )}
         
-        <Box sx={{ 
-          '& code': {
-            backgroundColor: alpha(theme.palette.text.primary, 0.1),
-            padding: '2px 5px',
-            borderRadius: 1,
-            fontFamily: 'monospace',
-            fontSize: '0.9em'
-          },
-          '& p': {
-            my: 0.5
-          },
-          '& ul, & ol': {
-            pl: 2.5,
-            my: 0.5
-          },
-          '& a': {
-            color: theme.palette.primary.main,
-            textDecoration: 'none',
-            '&:hover': {
-              textDecoration: 'underline'
+        {/* Message content */}
+        <Box 
+          sx={{ 
+            pl: { sm: 4 },
+            '& img': {
+              maxWidth: '100%',
+              borderRadius: theme.shape.borderRadius,
+              my: 1
+            },
+            '& p:first-of-type': {
+              mt: 0,
+            },
+            '& p:last-of-type': {
+              mb: 0,
+            },
+            '& p': {
+              my: 1.5,
+              fontSize: '0.95rem',
+              lineHeight: 1.6
+            },
+            '& h1, & h2, & h3, & h4, & h5, & h6': {
+              mt: 2.5,
+              mb: 1.5
+            },
+            '& ul, & ol': {
+              paddingLeft: 2.5,
+              mb: 1
+            },
+            '& li': {
+              mb: 0.5
+            },
+            '& a': {
+              color: theme.palette.primary.main,
+              textDecoration: 'none',
+              '&:hover': {
+                textDecoration: 'underline'
+              }
+            },
+            '& blockquote': {
+              borderLeft: `3px solid ${theme.palette.divider}`,
+              pl: 2,
+              ml: 0,
+              my: 2,
+              fontStyle: 'italic',
+              color: theme.palette.text.secondary
+            },
+            '& code': {
+              fontFamily: 'monospace',
+              backgroundColor: alpha(theme.palette.divider, 0.2),
+              padding: '2px 4px',
+              borderRadius: '3px',
+              fontSize: '0.9em'
+            },
+            '& pre': {
+              margin: '16px 0',
+              borderRadius: theme.shape.borderRadius,
+              padding: 0,
+              overflow: 'hidden'
+            },
+            '& table': {
+              borderCollapse: 'collapse',
+              width: '100%',
+              my: 2,
+              borderRadius: theme.shape.borderRadius,
+              overflow: 'hidden',
+              border: `1px solid ${theme.palette.divider}`
+            },
+            '& thead': {
+              backgroundColor: alpha(theme.palette.action.hover, 0.5)
+            },
+            '& th, & td': {
+              border: `1px solid ${theme.palette.divider}`,
+              padding: '8px 12px',
+              textAlign: 'left'
+            },
+            '& hr': {
+              border: 'none',
+              height: '1px',
+              backgroundColor: theme.palette.divider,
+              my: 2
             }
-          },
-          '& blockquote': {
-            borderLeft: `4px solid ${alpha(theme.palette.text.primary, 0.2)}`,
-            pl: 2,
-            py: 0.5,
-            my: 1,
-            bgcolor: alpha(theme.palette.text.primary, 0.05),
-            borderRadius: 1
-          },
-          '& table': {
-            borderCollapse: 'collapse',
-            width: '100%',
-            my: 2
-          },
-          '& th, & td': {
-            border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
-            padding: '8px 12px',
-            textAlign: 'left'
-          },
-          '& th': {
-            backgroundColor: alpha(theme.palette.primary.main, 0.1)
-          },
-          '& img': {
-            maxWidth: '100%',
-            height: 'auto',
-            borderRadius: 1,
-            my: 1
-          }
-        }}>
-          {message.type === 'user' ? (
-            <Typography variant="body1">{message.text}</Typography>
+          }}
+        >
+          {message.type === 'error' || message.type === 'info' ? (
+            <Typography variant="body2" color={getTextColor()} sx={{ fontWeight: message.type === 'error' ? 500 : 400 }}>
+              {message.text}
+            </Typography>
           ) : (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
                 code({node, inline, className, children, ...props}) {
                   const match = /language-(\w+)/.exec(className || '');
+                  const language = match ? match[1] : '';
                   
-                  return !inline && match ? (
-                    <Box sx={{ position: 'relative', mb: 2 }}>
+                  return !inline ? (
+                    <Box sx={{ position: 'relative' }}>
                       <Box 
                         sx={{ 
                           position: 'absolute', 
                           top: 0, 
                           right: 0, 
+                          zIndex: 1,
+                          p: 0.5,
                           bgcolor: alpha(theme.palette.background.paper, 0.8),
-                          px: 1,
-                          py: 0.5,
-                          borderTopRightRadius: theme.shape.borderRadius,
+                          borderBottomLeftRadius: theme.shape.borderRadius,
                           fontSize: '0.75rem',
-                          color: theme.palette.text.secondary,
-                          fontFamily: 'monospace',
-                          letterSpacing: 0.5,
-                          zIndex: 1
+                          color: theme.palette.text.secondary 
                         }}
                       >
-                        {match[1]}
+                        {language || 'code'}
+                        <Tooltip title={copied ? "Copied!" : "Copy code"}>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
+                              setCopied(true);
+                            }}
+                            color={copied ? "success" : "default"}
+                            sx={{ ml: 0.5, p: 0.5 }}
+                          >
+                            {copied ? <CopySuccessIcon fontSize="small" /> : <CopyIcon fontSize="small" />}
+                          </IconButton>
+                        </Tooltip>
                       </Box>
                       <SyntaxHighlighter
                         style={theme.palette.mode === 'dark' ? vscDarkPlus : prism}
-                        language={match[1]}
+                        language={language}
                         PreTag="div"
-                        showLineNumbers={true}
                         wrapLines={true}
-                        {...props}
                         customStyle={{
+                          margin: 0,
+                          padding: '1.5rem 1rem 1rem',
                           borderRadius: theme.shape.borderRadius,
-                          marginTop: '8px',
-                          marginBottom: '8px'
                         }}
+                        {...props}
                       >
                         {String(children).replace(/\n$/, '')}
                       </SyntaxHighlighter>
                     </Box>
                   ) : (
-                    <code className={className} {...props}>
+                    <code
+                      className={className}
+                      {...props}
+                      style={{
+                        fontFamily: 'monospace',
+                        backgroundColor: alpha(theme.palette.divider, 0.2),
+                        padding: '2px 4px',
+                        borderRadius: '3px',
+                        fontSize: '0.85em'
+                      }}
+                    >
                       {children}
                     </code>
                   );

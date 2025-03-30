@@ -37,7 +37,8 @@ import {
   FileDownload as ExportIcon,
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
-  KeyboardDoubleArrowUp as ScrollToTopIcon
+  KeyboardDoubleArrowUp as ScrollToTopIcon,
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../services/socketContext';
@@ -46,6 +47,7 @@ import { VariableSizeList as VirtualList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import Sidebar from './Sidebar';
 
 const ChatWindow = () => {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
@@ -69,7 +71,16 @@ const ChatWindow = () => {
   const listRef = useRef(null);
   const [messageHeights, setMessageHeights] = useState({});
   const TYPING_INDICATOR_TIMEOUT = 500;
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const closeSidebar = () => setSidebarOpen(false);
+  
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setDarkMode(prev => !prev);
+  };
+
   // Create custom theme
   const customTheme = React.useMemo(
     () =>
@@ -154,17 +165,19 @@ const ChatWindow = () => {
       // Ctrl+ArrowUp to retry last message
       if (e.ctrlKey && e.key === 'ArrowUp' && !isStreaming) {
         e.preventDefault();
-        const lastUserMessage = [...messages].reverse().find(msg => msg.type === 'user');
-        if (lastUserMessage) {
-          setInput(lastUserMessage.text);
-          inputRef.current?.focus();
-        }
+        handleRetryLast();
       }
 
       // Ctrl+D to toggle dark mode
       if (e.ctrlKey && e.key === 'd') {
         e.preventDefault();
-        setDarkMode(prev => !prev);
+        toggleDarkMode();
+      }
+      
+      // Ctrl+, to toggle sidebar
+      if (e.ctrlKey && e.key === ',') {
+        e.preventDefault();
+        toggleSidebar();
       }
     };
 
@@ -193,24 +206,45 @@ const ChatWindow = () => {
 
   // Fetch available models
   useEffect(() => {
-    fetch('/api/chat/models')
-      .then(response => response.json())
-      .then(data => {
+    const fetchModels = async () => {
+      try {
+        const response = await fetch('/api/chat/models');
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
         setAvailableModels(data);
         // Set default model for the current provider
         if (data[provider] && data[provider].length > 0) {
           setModelId(data[provider][0].id);
         }
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Error fetching models:', error);
         setSnackbar({
           open: true,
           message: 'Failed to load available models. Please try refreshing the page.',
           severity: 'error'
         });
-      });
-  }, []);
+        
+        // Handle the error by setting default providers and models
+        const fallbackModels = {
+          'openai': [
+            {'id': 'gpt-4o-mini', 'name': 'GPT-4o Mini', 'description': 'Fast model'},
+            {'id': 'gpt-4', 'name': 'GPT-4', 'description': 'Powerful model'},
+          ],
+          'groq': [
+            {'id': 'llama-3.3-70b-versatile', 'name': 'Llama 3.3 70B', 'description': 'Large model'},
+            {'id': 'llama-3.1-8b-instant', 'name': 'Llama 3.1 8B', 'description': 'Fast model'},
+          ]
+        };
+        
+        setAvailableModels(fallbackModels);
+        setModelId(fallbackModels[provider]?.[0]?.id || 'gpt-4o-mini');
+      }
+    };
+    
+    fetchModels();
+  }, [provider]);
 
   // Update model when provider changes
   useEffect(() => {
@@ -230,7 +264,7 @@ const ChatWindow = () => {
           if (lastMsg && lastMsg.type === 'bot' && isStreaming) {
             return [
               ...prev.slice(0, -1),
-              { ...lastMsg, text: lastMsg.text + data.content }
+              Object.assign({}, lastMsg, { text: lastMsg.text + data.content })
             ];
           } else {
             setIsStreaming(true);
@@ -241,13 +275,13 @@ const ChatWindow = () => {
         setIsStreaming(false);
         setIsTyping(false);
         // Store response metadata
-        setResponseMetadata({
+        setResponseMetadata(Object.assign({}, {
           mode,
           provider: getProviderName(provider),
           model: getModelName(),
           timestamp: new Date().toLocaleTimeString(),
           timeTaken: data.time_taken || 'N/A'
-        });
+        }));
       } else if (data.status === 'error') {
         setMessages(prev => [
           ...prev,
@@ -261,17 +295,13 @@ const ChatWindow = () => {
     const handleSystemMessage = (data) => {
       // Only show critical warnings
       if (data.status === 'warning' && data.content.includes('API key missing or invalid')) {
-        const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-        setProviderWarnings(prev => ({
-          ...prev,
-          [provider]: true
-        }));
+        setProviderWarnings(prev => Object.assign({}, prev, { [provider]: true }));
 
-        setSnackbar({
+        setSnackbar(Object.assign({}, {
           open: true,
           message: data.content,
           severity: 'warning'
-        });
+        }));
       }
     };
 
@@ -340,8 +370,81 @@ const ChatWindow = () => {
     
     // Clear message heights to reset virtualization
     setMessageHeights({});
+    
+    // Close sidebar after action
+    closeSidebar();
   };
 
+  const handleRetryLast = () => {
+    if (isStreaming) return;
+    
+    const lastUserMessage = [...messages].reverse().find(msg => msg.type === 'user');
+    if (lastUserMessage) {
+      setInput(lastUserMessage.text);
+      inputRef.current?.focus();
+    }
+    
+    // Close sidebar after action
+    closeSidebar();
+  };
+  
+  const handleExportChat = () => {
+    if (messages.length === 0) return;
+    
+    // Format the chat for export
+    const formattedChat = messages
+      .filter(msg => msg.type !== 'info')
+      .map(msg => {
+        if (msg.type === 'user') {
+          return `User: ${msg.text}`;
+        } else if (msg.type === 'bot') {
+          return `AI: ${msg.text}`;
+        } else {
+          return `System: ${msg.text}`;
+        }
+      })
+      .join('\n\n');
+    
+    // Add metadata
+    const metadata = `Chat-MM Export\nDate: ${new Date().toLocaleString()}\nModel: ${getProviderName(provider)} ${getModelName()}\nMode: ${mode}\n\n`;
+    const exportText = metadata + formattedChat;
+    
+    // Create and download file
+    const blob = new Blob([exportText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-mm-export-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    // Close sidebar after action
+    closeSidebar();
+  };
+
+  const handleProviderChange = (e) => {
+    const newProvider = e.target.value;
+    setProvider(newProvider);
+    
+    // Clear any previous warnings when switching providers
+    setSnackbar({ open: false, message: '', severity: 'info' });
+  };
+  
+  const handleModelChange = (e) => {
+    setModelId(e.target.value);
+  };
+  
+  const handleModeChange = (e) => {
+    setMode(e.target.value);
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  // Helper functions
   const getProviderName = (key) => {
     const providers = {
       'openai': 'OpenAI',
@@ -364,35 +467,6 @@ const ChatWindow = () => {
     return model ? model.name : modelId;
   };
 
-  const handleProviderChange = (e) => {
-    const newProvider = e.target.value;
-    setProvider(newProvider);
-    
-    // Clear any previous warnings when switching providers
-    setSnackbar({ open: false, message: '', severity: 'info' });
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
-
-  // Get status text for the footer
-  const getStatusText = () => {
-    const parts = [
-      `${getProviderName(provider)} ${getModelName()}`,
-    ];
-    
-    if (mode === 'llm') {
-      parts.push('using LLM only');
-    } else if (mode === 'rag_llm') {
-      parts.push('with document search');
-    } else if (mode === 'rag_llm_web') {
-      parts.push('with document search and web search');
-    }
-    
-    return parts.join(' ');
-  };
-
   // Virtualized row renderer
   const MessageRow = useCallback(({ index, style }) => {
     const message = messages[index];
@@ -410,6 +484,29 @@ const ChatWindow = () => {
 
   return (
     <ThemeProvider theme={customTheme}>
+      {/* Sidebar */}
+      <Sidebar 
+        open={sidebarOpen}
+        onClose={closeSidebar}
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
+        provider={provider}
+        onProviderChange={handleProviderChange}
+        modelId={modelId}
+        onModelChange={handleModelChange}
+        availableModels={availableModels}
+        mode={mode}
+        onModeChange={handleModeChange}
+        onClearChat={handleClearChat}
+        onSaveChat={() => {}}
+        onLoadChat={() => {}}
+        onExportChat={handleExportChat}
+        onNewChat={handleClearChat}
+        onRetry={handleRetryLast}
+        isStreaming={isStreaming}
+        providerWarnings={providerWarnings}
+      />
+    
       <Box
         sx={{
           flex: 1,
@@ -419,17 +516,45 @@ const ChatWindow = () => {
           overflow: 'hidden',
           bgcolor: customTheme.palette.background.default,
           transition: 'background-color 0.3s ease',
+          position: 'relative',
         }}
       >
+        {/* Menu button only */}
+        <Box sx={{ 
+          py: 2, 
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+        }}>
+          <IconButton 
+            sx={{ position: 'absolute', left: 16 }}
+            onClick={toggleSidebar}
+            color="primary"
+          >
+            <MenuIcon />
+          </IconButton>
+          
+          <Box sx={{ position: 'absolute', right: 16 }}>
+            {responseMetadata && (
+              <Typography variant="caption" color="text.secondary">
+                {getProviderName(provider)} {getModelName()}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+        
         {/* Chat messages area with virtualization */}
         <Box
           ref={chatContainerRef}
           sx={{
             flex: 1,
             overflowY: 'hidden',
-            py: 2,
-            px: { xs: 0, sm: 2 },
+            py: 1,
+            px: { xs: 1, sm: 2, md: 3 },
             position: 'relative',
+            mx: 'auto',
+            width: '100%',
+            maxWidth: '900px',
           }}
         >
           <AutoSizer>
@@ -471,33 +596,7 @@ const ChatWindow = () => {
               </Typography>
             </Box>
           )}
-          
-          {/* Response metadata */}
-          {responseMetadata && !isStreaming && (
-            <Box 
-              sx={{ 
-                mt: 2,
-                mb: 1,
-                display: 'flex', 
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 1,
-                opacity: 0.7,
-                fontSize: '0.75rem',
-                color: 'text.secondary'
-              }}
-            >
-              <Typography variant="caption">
-                {responseMetadata.provider} {responseMetadata.model} | 
-                Mode: {responseMetadata.mode === 'llm' ? 'LLM Only' : 
-                       responseMetadata.mode === 'rag_llm' ? 'RAG + LLM' : 
-                       'RAG + LLM + Web'} | 
-                Time: {responseMetadata.timeTaken}s | 
-                {responseMetadata.timestamp}
-              </Typography>
-            </Box>
-          )}
-          
+
           {/* Scroll to top button */}
           {messages.length > 8 && (
             <Tooltip title="Scroll to top">
@@ -520,7 +619,7 @@ const ChatWindow = () => {
           )}
         </Box>
 
-        {/* Input area - Now fixed to bottom */}
+        {/* Input area - Fixed to bottom */}
         <Paper
           elevation={3}
           sx={{
@@ -539,369 +638,68 @@ const ChatWindow = () => {
           }}
         >
           <Box 
+            component="form" 
+            onSubmit={handleSubmit}
             sx={{
-              mb: 2,
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 2
+              gap: 1,
+              mx: 'auto',
+              maxWidth: '900px'
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              {/* Provider selection */}
-              <FormControl size="small" variant="outlined" sx={{ minWidth: 120 }}>
-                <InputLabel id="provider-label">Provider</InputLabel>
-                <Select
-                  labelId="provider-label"
-                  value={provider}
-                  onChange={handleProviderChange}
-                  label="Provider"
-                  disabled={isStreaming}
-                >
-                  {Object.keys(availableModels).map(key => (
-                    <MenuItem key={key} value={key}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {getProviderName(key)}
-                        {providerWarnings[key] && (
-                          <Tooltip title="API key not configured for this provider. Will fall back to OpenAI.">
-                            <WarningIcon color="warning" fontSize="small" />
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              {/* Model selection */}
-              <FormControl size="small" variant="outlined" sx={{ minWidth: 150 }}>
-                <InputLabel id="model-label">Model</InputLabel>
-                <Select
-                  labelId="model-label"
-                  value={modelId || ''}
-                  onChange={(e) => setModelId(e.target.value)}
-                  label="Model"
-                  disabled={isStreaming || !availableModels[provider]}
-                >
-                  {availableModels[provider]?.map(model => (
-                    <MenuItem 
-                      key={model.id} 
-                      value={model.id}
-                      title={model.description}
-                    >
-                      {model.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              {/* Mode selection dropdown */}
-              <FormControl size="small" variant="outlined" sx={{ minWidth: 150 }}>
-                <InputLabel id="mode-label">Mode</InputLabel>
-                <Select
-                  labelId="mode-label"
-                  value={mode}
-                  onChange={(e) => setMode(e.target.value)}
-                  label="Mode"
-                  disabled={isStreaming}
-                  startAdornment={<SettingsIcon fontSize="small" sx={{ mr: 1, ml: -0.5 }} />}
-                >
-                  <MenuItem value="llm">
-                    <Tooltip title="Use only the LLM without retrieval or web search">
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>Mode-1: LLM Only</Typography>
-                      </Box>
-                    </Tooltip>
-                  </MenuItem>
-                  <MenuItem value="rag_llm">
-                    <Tooltip title="Use document search with LLM">
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <MenuBookIcon fontSize="small" sx={{ mr: 1 }} />
-                        <Typography>Mode-2: RAG + LLM</Typography>
-                      </Box>
-                    </Tooltip>
-                  </MenuItem>
-                  <MenuItem value="rag_llm_web">
-                    <Tooltip title="Use both document search and web search with LLM">
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <MenuBookIcon fontSize="small" sx={{ mr: 0.5 }} />
-                        <SearchIcon fontSize="small" sx={{ mr: 1 }} />
-                        <Typography>Mode-3: RAG + LLM + Web</Typography>
-                      </Box>
-                    </Tooltip>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-
-              {/* Dark/Light mode toggle */}
-              <Tooltip title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
-                <IconButton
-                  onClick={() => setDarkMode(prev => !prev)}
-                  color="primary"
-                  size="small"
-                  sx={{
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'rotate(180deg)',
-                    },
-                  }}
-                >
-                  {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
-                </IconButton>
-              </Tooltip>
-            </Box>
-            
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {/* New Chat button */}
-              <Tooltip title="New Chat (Ctrl+L)">
-                <span>
-                  <IconButton
-                    onClick={handleClearChat}
-                    color="primary"
-                    disabled={isStreaming}
-                  >
-                    <NewIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              
-              {/* Retry Last Query button */}
-              <Tooltip title="Retry Last Query (Ctrl+↑)">
-                <span>
-                  <IconButton
-                    onClick={() => {
-                      // Find the last user message
-                      const lastUserMessage = [...messages].reverse().find(msg => msg.type === 'user');
-                      if (lastUserMessage) {
-                        setInput(lastUserMessage.text);
-                        inputRef.current?.focus();
-                      }
-                    }}
-                    color="primary"
-                    disabled={isStreaming || !messages.some(msg => msg.type === 'user')}
-                  >
-                    <RetryIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              
-              {/* Save Chat button */}
-              <Tooltip title="Save Chat">
-                <span>
-                  <IconButton
-                    onClick={() => {
-                      // Create a JSON representation of the chat
-                      const chatData = {
-                        messages: messages,
-                        timestamp: new Date().toISOString(),
-                        provider,
-                        model: modelId
-                      };
-                      
-                      // Convert to a string and create a download link
-                      const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `chat-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      
-                      setSnackbar({
-                        open: true,
-                        message: 'Chat saved successfully!',
-                        severity: 'success'
-                      });
-                    }}
-                    color="primary"
-                    disabled={isStreaming || messages.length <= 1}
-                  >
-                    <SaveIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              
-              {/* Export Chat button */}
-              <Tooltip title="Export Chat as Text">
-                <span>
-                  <IconButton
-                    onClick={() => {
-                      // Create a plain text representation of the chat
-                      const chatText = messages
-                        .filter(msg => msg.type !== 'info') // Filter out info messages
-                        .map(msg => {
-                          const role = msg.type === 'user' ? 'User' : 'AI';
-                          return `${role}: ${msg.text}`;
-                        })
-                        .join('\n\n');
-                      
-                      // Add metadata at the top
-                      const metadata = `Chat Export - ${new Date().toLocaleString()}\nModel: ${getProviderName(provider)} ${getModelName()}\n\n`;
-                      const fullText = metadata + chatText;
-                      
-                      // Create and trigger download
-                      const blob = new Blob([fullText], { type: 'text/plain' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `chat-export-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      
-                      setSnackbar({
-                        open: true,
-                        message: 'Chat exported as text successfully!',
-                        severity: 'success'
-                      });
-                    }}
-                    color="primary"
-                    disabled={isStreaming || messages.length <= 1}
-                  >
-                    <ExportIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              
-              {/* Load Chat button */}
-              <Tooltip title="Load Chat">
-                <span>
-                  <IconButton
-                    onClick={() => {
-                      // Create an input element to select a file
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = '.json';
-                      
-                      input.onchange = (e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            try {
-                              const chatData = JSON.parse(event.target.result);
-                              if (chatData.messages && Array.isArray(chatData.messages)) {
-                                setMessages(chatData.messages);
-                                
-                                // Set provider and model if available
-                                if (chatData.provider && availableModels[chatData.provider]) {
-                                  setProvider(chatData.provider);
-                                  
-                                  if (chatData.model && availableModels[chatData.provider]?.some(m => m.id === chatData.model)) {
-                                    setModelId(chatData.model);
-                                  } else if (availableModels[chatData.provider].length > 0) {
-                                    setModelId(availableModels[chatData.provider][0].id);
-                                  }
-                                }
-                                
-                                setSnackbar({
-                                  open: true,
-                                  message: 'Chat loaded successfully!',
-                                  severity: 'success'
-                                });
-                              } else {
-                                throw new Error('Invalid chat data format');
-                              }
-                            } catch (err) {
-                              setSnackbar({
-                                open: true,
-                                message: `Error loading chat: ${err.message}`,
-                                severity: 'error'
-                              });
-                            }
-                          };
-                          reader.readAsText(file);
-                        }
-                      };
-                      
-                      input.click();
-                    }}
-                    color="primary"
-                    disabled={isStreaming}
-                  >
-                    <LoadIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              
-              {/* Delete Chat button (already exists) */}
-              <Tooltip title="Clear conversation">
-                <span>
-                  <IconButton
-                    onClick={handleClearChat}
-                    color="primary"
-                    disabled={messages.length <= 1 || isStreaming}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            </Box>
+            <TextField
+              fullWidth
+              placeholder={isConnected ? "Type your message..." : "Connecting..."}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              disabled={!isConnected || isStreaming}
+              multiline
+              maxRows={4}
+              inputRef={inputRef}
+              variant="outlined"
+              InputProps={{
+                sx: {
+                  borderRadius: 3,
+                  pr: 1,
+                }
+              }}
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              disabled={!input.trim() || !isConnected || isStreaming}
+              sx={{ 
+                borderRadius: '50%', 
+                minWidth: 0, 
+                width: 44, 
+                height: 44,
+                p: 0
+              }}
+              type="submit"
+            >
+              <SendIcon />
+            </Button>
           </Box>
-          
-          <form onSubmit={handleSubmit}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <TextField
-                fullWidth
-                placeholder="Ask anything about the documents or the web... (Alt+Enter to send)"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                disabled={!isConnected || isStreaming}
-                variant="outlined"
-                inputRef={inputRef}
-                InputProps={{
-                  sx: {
-                    pr: 1,
-                    backgroundColor: customTheme.palette.mode === 'dark' 
-                      ? alpha(customTheme.palette.background.paper, 0.5) 
-                      : alpha(customTheme.palette.background.default, 0.7),
-                  },
-                  endAdornment: input.length > 0 && (
-                    <Badge
-                      badgeContent={input.length}
-                      max={9999}
-                      color={input.length > 2000 ? "error" : "primary"}
-                      sx={{ mr: 1 }}
-                    />
-                  )
-                }}
-              />
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                disabled={!input.trim() || !isConnected || isStreaming}
-                sx={{ 
-                  minWidth: { xs: '56px', sm: '120px' },
-                  px: { xs: 2, sm: 3 }
-                }}
-                endIcon={isStreaming ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-              >
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                  {isStreaming ? 'Processing' : 'Send'}
-                </Box>
-              </Button>
-            </Box>
-          </form>
         </Paper>
-
-        {/* Snackbar for notifications */}
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={6000}
-          onClose={handleSnackbarClose}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        >
-          <Alert 
-            onClose={handleSnackbarClose} 
-            severity={snackbar.severity} 
-            variant="filled"
-            sx={{ width: '100%' }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
       </Box>
+      
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleSnackbarClose} 
+          severity={snackbar.severity} 
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </ThemeProvider>
   );
 };
