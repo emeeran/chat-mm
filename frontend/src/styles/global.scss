@@ -17,10 +17,15 @@ html, body {
   height: 100%;
 }
 
-/* Custom scrollbar */
+/* Improved transitions for better UX */
+body, button, input, textarea, .MuiPaper-root, .MuiCard-root, .MuiButton-root {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Custom scrollbar - more subtle and modern */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -28,27 +33,27 @@ html, body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
 }
 
 .dark-mode ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .dark-mode ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.3);
 }
 
-/* Typing animation */
+/* Enhanced typing animation */
 .typing-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   margin-right: 4px;
   background: currentColor;
@@ -78,43 +83,94 @@ html, body {
   }
 }
 
-/* Message animations */
+/* Improved message animations with slight bounce */
 @keyframes fadeIn {
-  from {
+  0% {
     opacity: 0;
     transform: translateY(10px);
   }
-  to {
+  70% {
+    transform: translateY(-2px);
+  }
+  100% {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
 .message-animation {
-  animation: fadeIn 0.3s ease-out forwards;
+  animation: fadeIn 0.4s ease-out forwards;
 }
 
-/* Code blocks styling */
+/* Enhanced code blocks styling */
 pre {
   border-radius: vars.$border-radius-md;
   overflow: auto;
   margin: 16px 0;
   background-color: #1e293b; /* slate-800 */
   padding: 16px;
+  position: relative;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #3b82f6; /* blue-500 */
+}
+
+.dark-mode pre {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 code {
   font-family: 'Fira Code', 'Roboto Mono', monospace;
   font-size: 0.9rem;
+  font-feature-settings: "liga" 0;
 }
 
 :not(pre) > code {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.08);
   padding: 0.2em 0.4em;
   border-radius: 4px;
   font-size: 0.9em;
+  color: #e53935; /* red-600 */
 }
 
 .dark-mode :not(pre) > code {
   background-color: rgba(255, 255, 255, 0.1);
+  color: #ff8a80; /* red-300 */
+}
+
+/* Focus styles for better accessibility */
+:focus-visible {
+  outline: 2px solid #2196f3;
+  outline-offset: 2px;
+}
+
+/* Improved button hover effects */
+button:hover,
+.MuiButton-root:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode button:hover,
+.dark-mode .MuiButton-root:hover {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Links styling */
+a {
+  color: #2196f3;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #1976d2;
+  text-decoration: underline;
+}
+
+.dark-mode a {
+  color: #90caf9;
+}
+
+.dark-mode a:hover {
+  color: #bbdefb;
 } 

@@ -9,6 +9,7 @@ import {
   Chip,
   Tooltip,
   IconButton,
+  Avatar,
 } from '@mui/material';
 import { 
   Person as PersonIcon,
@@ -16,7 +17,11 @@ import {
   Error as ErrorIcon,
   Info as InfoIcon,
   ContentCopy as CopyIcon,
-  Check as CopySuccessIcon
+  Check as CopySuccessIcon,
+  Code as CodeIcon,
+  FormatQuote as QuoteIcon,
+  Image as ImageIcon,
+  Link as LinkIcon
 } from '@mui/icons-material';
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
@@ -64,7 +69,9 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
           ? alpha(theme.palette.primary.dark, 0.1)
           : alpha(theme.palette.primary.light, 0.05);
       case 'bot':
-        return 'transparent';
+        return theme.palette.mode === 'dark'
+          ? alpha(theme.palette.background.paper, 0.6)
+          : alpha(theme.palette.background.paper, 1);
       case 'error':
         return theme.palette.mode === 'dark'
           ? alpha(theme.palette.error.dark, 0.1)
@@ -80,7 +87,9 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
   const getBorderColor = () => {
     switch (message.type) {
       case 'user':
-        return theme.palette.primary.main;
+        return theme.palette.mode === 'dark'
+          ? alpha(theme.palette.primary.main, 0.5)
+          : theme.palette.primary.main;
       case 'bot':
         return theme.palette.mode === 'dark' 
           ? alpha(theme.palette.divider, 0.2)
@@ -102,6 +111,23 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
         return theme.palette.info.main;
       default:
         return theme.palette.text.primary;
+    }
+  };
+
+  const getAvatarBgColor = () => {
+    switch (message.type) {
+      case 'user':
+        return theme.palette.primary.main;
+      case 'bot':
+        return theme.palette.mode === 'dark'
+          ? theme.palette.grey[700]
+          : theme.palette.grey[300];
+      case 'error':
+        return theme.palette.error.main;
+      case 'info':
+        return theme.palette.info.main;
+      default:
+        return theme.palette.grey[500];
     }
   };
 
@@ -142,9 +168,10 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
       opacity: 1, 
       y: 0,
       transition: { 
-        duration: 0.2,
+        duration: 0.3,
         type: "spring",
-        stiffness: 100
+        stiffness: 100,
+        damping: 15
       }
     },
     exit: { opacity: 0, transition: { duration: 0.2 } }
@@ -165,51 +192,46 @@ const Message = ({ message, isStreaming = false, onHeightChange }) => {
       layout
     >
       <Paper
-        elevation={0}
+        elevation={message.type === 'bot' ? 1 : 0}
         sx={{
           p: 2,
           mb: 1.5,
-          mx: { xs: 0, sm: 1 },
+          mx: { xs: 0, sm: message.type === 'user' ? 2 : 1 },
+          ml: { sm: message.type === 'user' ? 'auto' : 1 },
+          mr: { sm: message.type === 'bot' ? 'auto' : 1 },
           borderRadius: 2,
           backgroundColor: getBgColor(),
           border: `1px solid ${getBorderColor()}`,
-          maxWidth: '100%',
+          maxWidth: { xs: '100%', sm: message.type === 'user' ? '80%' : '90%' },
           wordBreak: 'break-word',
           position: 'relative',
           transition: 'all 0.2s ease-in-out',
           '&:hover': {
-            boxShadow: 1,
+            boxShadow: theme.shadows[2],
+            transform: 'translateY(-1px)',
             '.message-actions': {
               opacity: 1
             }
           }
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1, justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Box
+            <Avatar
               sx={{
-                mr: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                bgcolor: message.type === 'user' 
-                  ? alpha(theme.palette.primary.main, 0.1)
-                  : message.type === 'bot'
-                    ? alpha(theme.palette.secondary.main, 0.1)
-                    : alpha(getTextColor(), 0.1),
-                color: message.type === 'user'
-                  ? theme.palette.primary.main
-                  : message.type === 'bot'
-                    ? theme.palette.secondary.main
-                    : getTextColor()
+                mr: 1.5,
+                width: 32, 
+                height: 32,
+                bgcolor: getAvatarBgColor(),
+                color: message.type === 'bot' ? theme.palette.text.primary : '#fff',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  transform: 'scale(1.1)'
+                }
               }}
             >
               {getIcon()}
-            </Box>
+            </Avatar>
             <Typography 
               variant="caption" 
               sx={{ 

@@ -19,7 +19,8 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
-  Badge
+  Badge,
+  Chip
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -38,7 +39,8 @@ import {
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
   KeyboardDoubleArrowUp as ScrollToTopIcon,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  Android as BotIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../services/socketContext';
@@ -49,9 +51,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Sidebar from './Sidebar';
 
-const ChatWindow = () => {
-  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
-  const [darkMode, setDarkMode] = useState(prefersDarkMode);
+const ChatWindow = ({ darkMode, toggleDarkMode, sidebarOpen, setSidebarOpen }) => {
   const theme = useTheme();
   const { socket, isConnected } = useSocket();
   const [messages, setMessages] = useState([]);
@@ -71,81 +71,28 @@ const ChatWindow = () => {
   const listRef = useRef(null);
   const [messageHeights, setMessageHeights] = useState({});
   const TYPING_INDICATOR_TIMEOUT = 500;
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const toggleSidebar = () => setSidebarOpen(prev => !prev);
   const closeSidebar = () => setSidebarOpen(false);
-  
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    setDarkMode(prev => !prev);
-  };
 
-  // Create custom theme
-  const customTheme = React.useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: darkMode ? 'dark' : 'light',
-          primary: {
-            main: '#2196f3',
-          },
-          secondary: {
-            main: '#f50057',
-          },
-          background: {
-            default: darkMode ? '#121212' : '#f5f5f5',
-            paper: darkMode ? '#1e1e1e' : '#ffffff',
-          },
-        },
-        typography: {
-          fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-          body1: {
-            fontSize: '1rem',
-            lineHeight: 1.6,
-          },
-          body2: {
-            fontSize: '0.875rem',
-            lineHeight: 1.5,
-          },
-        },
-        shape: {
-          borderRadius: 8,
-        },
-        components: {
-          MuiPaper: {
-            styleOverrides: {
-              root: {
-                backgroundImage: 'none',
-                boxShadow: darkMode 
-                  ? '0 2px 4px rgba(0,0,0,0.2)' 
-                  : '0 2px 4px rgba(0,0,0,0.05)',
-              },
-            },
-          },
-          MuiButton: {
-            styleOverrides: {
-              root: {
-                textTransform: 'none',
-                fontWeight: 500,
-              },
-            },
-          },
-          MuiTextField: {
-            styleOverrides: {
-              root: {
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: darkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
-                  },
-                },
-              },
-            },
-          },
-        },
-      }),
-    [darkMode],
-  );
+  // Function to measure message heights
+  const measureMessage = useCallback((id, height) => {
+    setMessageHeights(prev => {
+      if (prev[id] !== height) {
+        if (listRef.current) {
+          listRef.current.resetAfterIndex(0);
+        }
+        return { ...prev, [id]: height };
+      }
+      return prev;
+    });
+  }, []);
+
+  // Get message height for virtualization
+  const getMessageHeight = useCallback((index) => {
+    const message = messages[index];
+    return messageHeights[message.id] || 100; // Default height
+  }, [messages, messageHeights]);
   
   // Keyboard shortcuts
   useEffect(() => {
@@ -183,26 +130,7 @@ const ChatWindow = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [input, isStreaming, messages]);
-
-  // Function to measure message heights
-  const measureMessage = useCallback((id, height) => {
-    setMessageHeights(prev => {
-      if (prev[id] !== height) {
-        if (listRef.current) {
-          listRef.current.resetAfterIndex(0);
-        }
-        return { ...prev, [id]: height };
-      }
-      return prev;
-    });
-  }, []);
-
-  // Get message height for virtualization
-  const getMessageHeight = useCallback((index) => {
-    const message = messages[index];
-    return messageHeights[message.id] || 100; // Default height
-  }, [messages, messageHeights]);
+  }, [input, isStreaming, messages, toggleDarkMode, toggleSidebar]);
 
   // Fetch available models
   useEffect(() => {
@@ -275,13 +203,11 @@ const ChatWindow = () => {
         setIsStreaming(false);
         setIsTyping(false);
         // Store response metadata
-        setResponseMetadata(Object.assign({}, {
-          mode,
-          provider: getProviderName(provider),
+        setResponseMetadata({
           model: getModelName(),
-          timestamp: new Date().toLocaleTimeString(),
-          timeTaken: data.time_taken || 'N/A'
-        }));
+          time: data.time_taken || null,
+          tokens: data.tokens || null
+        });
       } else if (data.status === 'error') {
         setMessages(prev => [
           ...prev,
@@ -295,13 +221,13 @@ const ChatWindow = () => {
     const handleSystemMessage = (data) => {
       // Only show critical warnings
       if (data.status === 'warning' && data.content.includes('API key missing or invalid')) {
-        setProviderWarnings(prev => Object.assign({}, prev, { [provider]: true }));
+        setProviderWarnings(prev => ({ ...prev, [provider]: true }));
 
-        setSnackbar(Object.assign({}, {
+        setSnackbar({
           open: true,
           message: data.content,
           severity: 'warning'
-        }));
+        });
       }
     };
 
@@ -316,9 +242,7 @@ const ChatWindow = () => {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollToItem(messages.length - 1);
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   // Handle typing indicator
@@ -467,24 +391,14 @@ const ChatWindow = () => {
     return model ? model.name : modelId;
   };
 
-  // Virtualized row renderer
-  const MessageRow = useCallback(({ index, style }) => {
-    const message = messages[index];
-    return (
-      <div style={style}>
-        <Message
-          key={message.id}
-          message={message}
-          isStreaming={isStreaming && index === messages.length - 1}
-          onHeightChange={(height) => measureMessage(message.id, height)}
-        />
-      </div>
-    );
-  }, [messages, isStreaming, measureMessage]);
-
   return (
-    <ThemeProvider theme={customTheme}>
-      {/* Sidebar */}
+    <Box
+      sx={{
+        display: 'flex',
+        height: 'calc(100vh - 64px)', // Subtract header height
+        position: 'relative',
+      }}
+    >
       <Sidebar 
         open={sidebarOpen}
         onClose={closeSidebar}
@@ -501,186 +415,347 @@ const ChatWindow = () => {
         onSaveChat={() => {}}
         onLoadChat={() => {}}
         onExportChat={handleExportChat}
-        onNewChat={handleClearChat}
+        onNewChat={() => handleClearChat()}
         onRetry={handleRetryLast}
         isStreaming={isStreaming}
         providerWarnings={providerWarnings}
       />
-    
+      
       <Box
         sx={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          height: 'calc(100vh - 64px)', // 64px is the height of the header
+          height: '100%',
           overflow: 'hidden',
-          bgcolor: customTheme.palette.background.default,
-          transition: 'background-color 0.3s ease',
           position: 'relative',
         }}
       >
-        {/* Menu button only */}
-        <Box sx={{ 
-          py: 2, 
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-        }}>
-          <IconButton 
-            sx={{ position: 'absolute', left: 16 }}
-            onClick={toggleSidebar}
+        {/* Mobile menu toggle */}
+        <Box
+          sx={{
+            display: { xs: 'flex', md: 'none' },
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            zIndex: 10,
+          }}
+        >
+          <IconButton
             color="primary"
+            onClick={toggleSidebar}
+            aria-label="Open settings"
+            sx={{
+              bgcolor: theme.palette.background.paper,
+              boxShadow: 1,
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+              },
+            }}
           >
             <MenuIcon />
           </IconButton>
-          
-          <Box sx={{ position: 'absolute', right: 16 }}>
-            {responseMetadata && (
-              <Typography variant="caption" color="text.secondary">
-                {getProviderName(provider)} {getModelName()}
-              </Typography>
-            )}
-          </Box>
         </Box>
         
-        {/* Chat messages area with virtualization */}
+        {/* Main chat area with shadow overlay for scrolling indication */}
         <Box
           ref={chatContainerRef}
           sx={{
             flex: 1,
-            overflowY: 'hidden',
-            py: 1,
-            px: { xs: 1, sm: 2, md: 3 },
+            overflowY: 'auto',
+            px: { xs: 1, sm: 2 },
+            py: 2,
             position: 'relative',
-            mx: 'auto',
-            width: '100%',
-            maxWidth: '900px',
+            scrollBehavior: 'smooth',
+            background: theme.palette.mode === 'dark' 
+              ? 'linear-gradient(180deg, rgba(18,18,18,0) 0%, rgba(18,18,18,0.8) 100%)' 
+              : 'linear-gradient(180deg, rgba(245,245,245,0) 0%, rgba(245,245,245,0.8) 100%)',
+            backgroundSize: '100% 40px',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'bottom',
           }}
         >
-          <AutoSizer>
-            {({ height, width }) => (
-              <VirtualList
-                ref={listRef}
-                height={height}
-                width={width}
-                itemCount={messages.length}
-                itemSize={getMessageHeight}
-                overscanCount={5}
-              >
-                {MessageRow}
-              </VirtualList>
-            )}
-          </AutoSizer>
-
-          {/* Typing indicator */}
-          {isTyping && !isStreaming && (
+          {messages.length === 0 ? (
             <Box 
               sx={{ 
-                position: 'absolute',
-                bottom: 10, 
-                left: 20,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                bgcolor: alpha(customTheme.palette.background.paper, 0.8),
-                backdropFilter: 'blur(4px)',
-                borderRadius: theme.shape.borderRadius,
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                height: '100%',
+                textAlign: 'center',
                 px: 2,
-                py: 1,
-                boxShadow: 1
+                opacity: 0.7,
               }}
             >
-              <CircularProgress size={16} />
-              <Typography variant="caption" color="text.secondary">
-                {getProviderName(provider)} is thinking...
+              <BotIcon sx={{ fontSize: 60, mb: 2, color: theme.palette.primary.main }} />
+              <Typography variant="h5" gutterBottom>Welcome to Chat-MM</Typography>
+              <Typography variant="body1" sx={{ maxWidth: 600, mb: 3 }}>
+                This is a multimodal chat application that supports various LLM providers and retrieval modes.
               </Typography>
-            </Box>
-          )}
-
-          {/* Scroll to top button */}
-          {messages.length > 8 && (
-            <Tooltip title="Scroll to top">
-              <IconButton
+              <Paper
+                elevation={0}
                 sx={{
-                  position: 'absolute',
-                  right: 20,
-                  bottom: 60,
-                  bgcolor: alpha(customTheme.palette.background.paper, 0.8),
-                  '&:hover': {
-                    bgcolor: alpha(customTheme.palette.background.paper, 0.9),
-                  },
-                  boxShadow: 2,
+                  p: 2,
+                  mt: 2,
+                  maxWidth: 600,
+                  borderRadius: 2,
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
                 }}
-                onClick={() => listRef.current?.scrollToItem(0)}
               >
-                <ScrollToTopIcon />
-              </IconButton>
-            </Tooltip>
+                <Typography variant="body2" component="div">
+                  <Box component="span" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>Try asking:</Box>
+                  <Box component="ul" sx={{ pl: 2 }}>
+                    <li>Explain the difference between RAG and traditional LLM approaches</li>
+                    <li>Summarize the key features of the Groq language model</li>
+                    <li>What are the advantages of using Anthropic's Claude model?</li>
+                  </Box>
+                </Typography>
+              </Paper>
+            </Box>
+          ) : (
+            messages.map((message) => (
+              <Message
+                key={message.id}
+                message={message}
+                isStreaming={isStreaming && message.id === messages[messages.length - 1].id}
+                onHeightChange={(height) => measureMessage(message.id, height)}
+              />
+            ))
           )}
+          <div ref={messagesEndRef} />
         </Box>
 
-        {/* Input area - Fixed to bottom */}
-        <Paper
-          elevation={3}
-          sx={{
-            p: 2,
-            borderTop: `1px solid ${customTheme.palette.divider}`,
-            backgroundColor: customTheme.palette.mode === 'dark' 
-              ? alpha(customTheme.palette.background.paper, 0.8) 
-              : alpha(customTheme.palette.background.paper, 0.8),
-            backdropFilter: 'blur(8px)',
-            zIndex: 10,
-            position: 'sticky',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            transition: 'all 0.3s ease',
-          }}
-        >
-          <Box 
-            component="form" 
-            onSubmit={handleSubmit}
+        {/* Floating scroll to bottom button */}
+        {messages.length > 5 && (
+          <Tooltip title="Scroll to bottom">
+            <IconButton
+              color="primary"
+              aria-label="scroll to bottom"
+              onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              sx={{
+                position: 'absolute',
+                bottom: 90,
+                right: 20,
+                zIndex: 2,
+                backgroundColor: theme.palette.background.paper,
+                boxShadow: theme.shadows[3],
+                opacity: 0.8,
+                '&:hover': {
+                  opacity: 1,
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? alpha(theme.palette.primary.main, 0.2) 
+                    : alpha(theme.palette.primary.main, 0.1),
+                },
+                transition: 'all 0.2s',
+              }}
+            >
+              <ScrollToTopIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+        
+        {/* Message response metadata */}
+        {responseMetadata && (
+          <Paper
+            elevation={0}
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
+              justifyContent: 'center',
+              py: 0.5,
+              px: 2,
               mx: 'auto',
-              maxWidth: '900px'
+              mb: 1,
+              borderRadius: 10,
+              bgcolor: alpha(theme.palette.info.main, 0.1),
+              border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`,
+              color: theme.palette.info.main,
+              fontSize: '0.75rem',
             }}
           >
-            <TextField
-              fullWidth
-              placeholder={isConnected ? "Type your message..." : "Connecting..."}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              disabled={!isConnected || isStreaming}
-              multiline
-              maxRows={4}
-              inputRef={inputRef}
+            <InfoIcon fontSize="small" sx={{ mr: 1 }} />
+            {responseMetadata.model && (
+              <Typography variant="caption" sx={{ mr: 1 }}>
+                Model: {responseMetadata.model}
+              </Typography>
+            )}
+            {responseMetadata.tokens && (
+              <Typography variant="caption" sx={{ mr: 1 }}>
+                Tokens: {responseMetadata.tokens}
+              </Typography>
+            )}
+            {responseMetadata.time && (
+              <Typography variant="caption">
+                Time: {responseMetadata.time}s
+              </Typography>
+            )}
+          </Paper>
+        )}
+
+        {/* Input Area */}
+        <Paper
+          elevation={3}
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            p: 2,
+            mx: 2,
+            mb: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            borderRadius: 3,
+            transition: 'all 0.3s ease',
+            boxShadow: isStreaming 
+              ? `0 0 0 2px ${theme.palette.primary.main}`
+              : theme.shadows[1],
+            '&:hover': {
+              boxShadow: isStreaming 
+                ? `0 0 0 2px ${theme.palette.primary.main}`
+                : theme.shadows[3],
+            },
+            position: 'relative',
+          }}
+        >
+          {/* Status indicator */}
+          <Box 
+            sx={{ 
+              position: 'absolute',
+              top: -10,
+              right: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1,
+            }}
+          >
+            <Chip
+              size="small"
+              label={isConnected ? "Connected" : "Disconnected"}
+              color={isConnected ? "success" : "error"}
               variant="outlined"
-              InputProps={{
-                sx: {
-                  borderRadius: 3,
-                  pr: 1,
-                }
+              sx={{ 
+                height: 24,
+                fontSize: '0.7rem',
+                '& .MuiChip-label': { px: 1, py: 0.5 }
               }}
             />
-            <Button
-              variant="contained"
-              color="primary"
-              disabled={!input.trim() || !isConnected || isStreaming}
-              sx={{ 
-                borderRadius: '50%', 
-                minWidth: 0, 
-                width: 44, 
-                height: 44,
-                p: 0
-              }}
-              type="submit"
-            >
-              <SendIcon />
-            </Button>
           </Box>
+          
+          <TextField
+            inputRef={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message here..."
+            multiline
+            maxRows={4}
+            variant="outlined"
+            fullWidth
+            disabled={isStreaming}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                fontSize: '0.95rem',
+                lineHeight: 1.5,
+                py: 0.5,
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'transparent',
+              },
+              mb: 1,
+            }}
+            InputProps={{
+              sx: { '&.Mui-focused': { boxShadow: 'none' } },
+            }}
+          />
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+            {/* Input tools */}
+            <Box>
+              <Tooltip title="LLM Mode" placement="top">
+                <FormControl 
+                  sx={{ mr: 1, minWidth: 120 }}
+                  size="small"
+                >
+                  <Select
+                    value={mode}
+                    onChange={handleModeChange}
+                    displayEmpty
+                    disabled={isStreaming}
+                    sx={{ 
+                      height: 36,
+                      fontSize: '0.8rem',
+                      bgcolor: alpha(theme.palette.background.paper, 0.9)
+                    }}
+                  >
+                    <MenuItem value="llm">LLM Only</MenuItem>
+                    <MenuItem value="rag_llm">RAG + LLM</MenuItem>
+                    <MenuItem value="rag_llm_web">RAG + LLM + Web</MenuItem>
+                  </Select>
+                </FormControl>
+              </Tooltip>
+              
+              <Tooltip title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"} placement="top">
+                <IconButton
+                  onClick={toggleDarkMode}
+                  sx={{ mr: 1 }}
+                  size="small"
+                >
+                  {darkMode ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+              
+              <Tooltip title="Clear Chat" placement="top">
+                <span>
+                  <IconButton
+                    onClick={handleClearChat}
+                    disabled={messages.length === 0 || isStreaming}
+                    size="small"
+                    color="error"
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Box>
+            
+            {/* Submit button */}
+            <Tooltip title="Send Message (Alt+Enter)">
+              <span>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  disabled={!input.trim() || isStreaming}
+                  endIcon={isStreaming ? <CircularProgress size={16} /> : <SendIcon />}
+                  sx={{
+                    px: 3,
+                    py: 1,
+                    borderRadius: 10,
+                    textTransform: 'none',
+                    fontWeight: 500,
+                  }}
+                >
+                  {isStreaming ? 'Processing...' : 'Send'}
+                </Button>
+              </span>
+            </Tooltip>
+          </Box>
+          
+          {/* Keyboard shortcuts hint */}
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              mt: 0.5, 
+              textAlign: 'center',
+              color: theme.palette.text.secondary,
+              opacity: 0.7,
+              fontSize: '0.7rem',
+            }}
+          >
+            Press Alt+Enter to send • Ctrl+L to clear • Ctrl+D to toggle dark mode
+          </Typography>
         </Paper>
       </Box>
       
@@ -700,7 +775,7 @@ const ChatWindow = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </ThemeProvider>
+    </Box>
   );
 };
 
