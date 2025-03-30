@@ -1,4 +1,4 @@
-#!/home/em/code/wip/rr-chat-app/.venv/bin/python
+#!/home/em/code/wip/Chat-MM/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
