@@ -28,7 +28,7 @@ venv/
 backend/.env
 local/
 local/documents/
-
+backend/documents/
 
 # FAISS Index
 faiss_index/
