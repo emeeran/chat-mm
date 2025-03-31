@@ -30,6 +30,8 @@ import {
 } from '@mui/icons-material';
 import Message from './Message';
 import BotIcon from '../icons/BotIcon';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const ChatWindow = ({
   messages = [],
@@ -100,35 +102,6 @@ const ChatWindow = ({
     setIsCopySuccess(true);
     setTimeout(() => setIsCopySuccess(false), 2000);
   };
-
-  // Show welcome message when no messages
-  const renderWelcomeScreen = () => (
-    <Fade in={true} timeout={800}>
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        height: '100%',
-        p: { xs: 2, sm: 4 },
-        textAlign: 'center',
-        opacity: 0.95,
-        maxWidth: '900px',
-        mx: 'auto',
-      }}>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            mb: 2,
-            color: theme.palette.text.secondary,
-            fontWeight: 500,
-          }}
-        >
-          Ask me anything or upload an image to discuss. I'm powered by various AI models and can perform web searches for the latest information.
-        </Typography>
-      </Box>
-    </Fade>
-  );
 
   return (
     <Box
@@ -201,9 +174,9 @@ const ChatWindow = ({
         sx={{
           flexGrow: 1,
           overflowY: 'auto',
-          mt: { xs: 7, md: 0 }, // Add top margin to push below the mobile app bar
+          mt: { xs: 7, md: 0 },
           pt: 2,
-          pb: 10, // Add padding to the bottom to ensure content isn't hidden behind the input box
+          pb: 10,
           px: { xs: 1, sm: 2, md: 3 },
           height: '100%',
           scrollbarWidth: 'thin',
@@ -222,33 +195,248 @@ const ChatWindow = ({
           },
         }}
       >
-        {messages.length === 0 ? (
-          renderWelcomeScreen()
-        ) : (
-          <Box 
-            sx={{ 
-              py: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 3,
-              maxWidth: '900px',
-              mx: 'auto',
-              width: '100%',
-            }}
-          >
-            {console.log('Rendering messages:', messages)}
-            {messages.map((message, index) => (
-              <Message 
-                key={index} 
-                message={message}
-                theme={theme}
-                isStreaming={isStreaming && index === messages.length - 1 && message.role === 'assistant'}
-                onCopySuccess={handleCopySuccess}
-              />
-            ))}
-            <div ref={messagesEndRef} />
-          </Box>
-        )}
+        <Paper
+          elevation={0}
+          sx={{ 
+            py: 0.5,
+            px: 1.5,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0,
+            maxWidth: '1000px',
+            mx: 'auto',
+            width: '100%',
+            borderRadius: 2,
+            backgroundColor: alpha(theme.palette.background.paper, 0.8),
+            color: theme.palette.text.primary,
+            overflow: 'hidden',
+            minHeight: '50vh',
+            border: `1px solid ${alpha(theme.palette.divider, 0.6)}`,
+          }}
+        >
+          {messages.map((message, index) => (
+            <Box key={index} sx={{ 
+              mb: index < messages.length - 1 ? 0.4 : 0,
+              fontSize: '0.85rem', 
+              whiteSpace: 'pre-wrap', 
+              lineHeight: 1.1,
+              backgroundColor: message.role === 'user' 
+                ? alpha(theme.palette.primary.main, 0.05) 
+                : (index % 2 === 1 ? alpha(theme.palette.background.default, 0.3) : 'transparent'),
+              borderLeft: message.role === 'user' 
+                ? `2px solid ${alpha(theme.palette.primary.main, 0.5)}` 
+                : `2px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+              pl: 0.5,
+              pr: 0.3,
+              py: message.role === 'user' ? 0.3 : 0.4,
+              borderRadius: '2px',
+              position: 'relative',
+            }}>
+              {message.role === 'user' && (
+                <Box component="span" sx={{ 
+                  color: theme.palette.primary.main, 
+                  fontWeight: 'bold', 
+                  fontFamily: '"Consolas", "Monaco", monospace', 
+                  fontSize: '0.8rem',
+                  mr: 0.3,
+                  display: 'inline-block',
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  px: 0.3,
+                  borderRadius: '3px',
+                }}>
+                  u&gt;
+                </Box>
+              )}
+              {message.role === 'assistant' && (
+                <Box component="span" sx={{ 
+                  color: theme.palette.secondary.main, 
+                  fontWeight: 'bold', 
+                  fontFamily: '"Consolas", "Monaco", monospace', 
+                  fontSize: '0.8rem',
+                  mr: 0.3,
+                  display: 'inline-block',
+                  backgroundColor: alpha(theme.palette.secondary.main, 0.1),
+                  px: 0.3,
+                  borderRadius: '3px',
+                }}>
+                  a&gt;
+                </Box>
+              )}
+              <Box 
+                sx={{ 
+                  display: 'inline-block', 
+                  width: 'calc(100% - 35px)',
+                  verticalAlign: 'top',
+                  ml: 0.3,
+                  '& pre': {
+                    backgroundColor: alpha(theme.palette.mode === 'dark' ? '#2d2d2d' : '#f5f5f5', 0.9),
+                    p: 0.4,
+                    borderRadius: 0.5,
+                    overflow: 'auto',
+                    fontSize: '0.8rem',
+                    my: 0.2,
+                    lineHeight: 1.05,
+                    fontFamily: '"Consolas", "Monaco", monospace',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                  },
+                  '& code': {
+                    backgroundColor: alpha(theme.palette.mode === 'dark' ? '#2d2d2d' : '#f5f5f5', 0.7),
+                    p: 0.1,
+                    borderRadius: 0.3,
+                    fontFamily: '"Consolas", "Monaco", monospace',
+                    fontSize: '0.8rem',
+                    color: theme.palette.mode === 'dark' ? '#e6db74' : '#007700',
+                  },
+                  '& img': {
+                    maxWidth: '100%',
+                    borderRadius: 0.5,
+                    my: 0.2,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+                  },
+                  '& table': {
+                    borderCollapse: 'collapse',
+                    width: '100%',
+                    mb: 0.2,
+                    mt: 0.2,
+                    fontSize: '0.8rem',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
+                  },
+                  '& th, & td': {
+                    border: `1px solid ${theme.palette.divider}`,
+                    p: 0.1,
+                    fontSize: '0.75rem'
+                  },
+                  '& th': {
+                    backgroundColor: alpha(theme.palette.background.default, 0.5),
+                    fontWeight: 'bold',
+                  },
+                  '& a': {
+                    color: theme.palette.primary.main,
+                    textDecoration: 'underline',
+                    '&:hover': {
+                      textDecoration: 'none',
+                    }
+                  },
+                  '& blockquote': {
+                    borderLeft: `2px solid ${alpha(theme.palette.primary.main, 0.4)}`,
+                    pl: 0.4,
+                    ml: 0,
+                    my: 0.1,
+                    color: theme.palette.text.secondary,
+                    backgroundColor: alpha(theme.palette.background.default, 0.3),
+                    py: 0,
+                  },
+                  '& ul, & ol': {
+                    pl: 1,
+                    my: 0,
+                    mb: 0,
+                    pt: 0,
+                    pb: 0,
+                  },
+                  '& li': {
+                    mb: 0,
+                    mt: 0,
+                    lineHeight: 1,
+                    paddingBottom: 0,
+                    paddingTop: 0,
+                  },
+                  '& li p': {
+                    my: 0,
+                    mb: 0,
+                    pt: 0,
+                    pb: 0,
+                    lineHeight: 1,
+                  },
+                  '& li + li': {
+                    mt: -0.1,
+                  },
+                  '& p': {
+                    my: 0.1,
+                    lineHeight: 1.05,
+                    mb: 0.1,
+                  },
+                  '& h1, & h2, & h3, & h4, & h5, & h6': {
+                    my: 0.4,
+                    lineHeight: 1.1,
+                    color: theme.palette.mode === 'dark' 
+                      ? alpha(theme.palette.primary.light, 0.9)
+                      : alpha(theme.palette.primary.dark, 0.9),
+                    fontWeight: 'bold',
+                  },
+                  '& h2': { 
+                    fontSize: '1.05rem', 
+                    borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`, 
+                    pb: 0.2, 
+                    mb: 0.4, 
+                    mt: 0.6,
+                    color: theme.palette.primary.main,
+                  },
+                  '& h3': { 
+                    fontSize: '0.95rem', 
+                    mb: 0.3,
+                    mt: 0.5,
+                    fontWeight: 'bold',
+                    color: theme.palette.secondary.main,
+                  },
+                  '& ul': {
+                    pl: 1,
+                    my: 0.2,
+                    mb: 0.4,
+                    pt: 0,
+                    pb: 0,
+                  },
+                  '& ul li': {
+                    mb: 0.05,
+                    mt: 0,
+                    lineHeight: 1.1,
+                    paddingBottom: 0,
+                    paddingTop: 0,
+                    position: 'relative',
+                    pl: 0.2,
+                  },
+                  '& ul li::before': {
+                    content: '"-"',
+                    position: 'absolute',
+                    left: -0.8,
+                    color: theme.palette.mode === 'dark' 
+                      ? alpha(theme.palette.primary.light, 0.9)
+                      : alpha(theme.palette.primary.main, 0.9),
+                    fontWeight: 'bold',
+                  },
+                  '& table': {
+                    borderCollapse: 'collapse',
+                    width: '100%',
+                    mb: 0.5,
+                    mt: 0.5,
+                    fontSize: '0.8rem',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
+                  },
+                  '& th': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                    color: theme.palette.primary.main,
+                    fontWeight: 'bold',
+                    fontSize: '0.8rem',
+                  },
+                  '& hr': {
+                    my: 0.2,
+                    borderColor: theme.palette.divider,
+                  },
+                  '& strong': {
+                    color: theme.palette.mode === 'dark' 
+                      ? alpha(theme.palette.primary.light, 0.9)
+                      : alpha(theme.palette.primary.dark, 0.9),
+                  },
+                  lineHeight: 1.1,
+                }}
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {message.content}
+                </ReactMarkdown>
+              </Box>
+            </Box>
+          ))}
+          <div ref={messagesEndRef} />
+        </Paper>
       </Box>
 
       {/* Scroll to bottom button */}
@@ -279,7 +467,7 @@ const ChatWindow = ({
           bottom: 76,
           width: '100%',
           mx: 'auto',
-          maxWidth: '900px',
+          maxWidth: '1000px',
           opacity: 0.6,
         }}
       />
@@ -299,7 +487,7 @@ const ChatWindow = ({
           right: 0,
           zIndex: 10,
           borderRadius: '16px 16px 0 0',
-          maxWidth: '900px',
+          maxWidth: '1000px',
           mx: 'auto',
           width: '100%',
           mb: 0,

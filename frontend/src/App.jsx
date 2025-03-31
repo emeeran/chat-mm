@@ -7,7 +7,7 @@ import { SocketProvider, useSocket } from './services/socketContext';
 import { availableModels, providerWarnings } from './config/models';
 
 // Define sidebar width for consistency
-const sidebarWidth = { xs: 280, sm: 350 };
+const sidebarWidth = { xs: 240, sm: 300 };
 
 // Improved color palettes
 const lightTheme = createTheme({
