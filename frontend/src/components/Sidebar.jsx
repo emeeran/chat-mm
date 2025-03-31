@@ -22,7 +22,8 @@ import {
   ListItemButton,
   alpha,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  TextField
 } from '@mui/material';
 import {
   DarkMode as DarkModeIcon,
@@ -69,12 +70,17 @@ const Sidebar = ({
   responseMetadata,
   isConnected,
   sidebarWidth,
-  toggleSidebar
+  toggleSidebar,
+  persona,
+  onPersonaChange,
+  customSystemMessage,
+  onCustomSystemMessageChange
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [showSettings, setShowSettings] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [showCustomMessage, setShowCustomMessage] = useState(false);
   
   // Function to get provider display name and color
   const getProviderInfo = (providerName) => {
@@ -319,9 +325,59 @@ const Sidebar = ({
                   disabled={isStreaming}
                 >
                   <MenuItem value="llm">LLM Chat</MenuItem>
-                  <MenuItem value="vision">Vision (Image Support)</MenuItem>
+                  <MenuItem value="llm_rag">LLM+RAG Chat</MenuItem>
+                  <MenuItem value="vision">LLM Vision</MenuItem>
+                  <MenuItem value="audio">LLM Audio</MenuItem>
+                  <MenuItem value="content">Content Chat</MenuItem>
                 </Select>
               </FormControl>
+
+              {/* Persona Selection */}
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id="persona-select-label">Persona</InputLabel>
+                <Select
+                  labelId="persona-select-label"
+                  id="persona-select"
+                  value={persona}
+                  onChange={(e) => {
+                    onPersonaChange(e);
+                    setShowCustomMessage(e.target.value === 'custom');
+                  }}
+                  label="Persona"
+                  disabled={isStreaming}
+                >
+                  <MenuItem value="default">Default Assistant</MenuItem>
+                  <MenuItem value="expert">Technical Expert</MenuItem>
+                  <MenuItem value="teacher">Educational Guide</MenuItem>
+                  <MenuItem value="creative">Creative Assistant</MenuItem>
+                  <MenuItem value="analyst">Data Analyst</MenuItem>
+                  <MenuItem value="coder">Code Expert</MenuItem>
+                  <MenuItem value="researcher">Research Assistant</MenuItem>
+                  <MenuItem value="writer">Writing Assistant</MenuItem>
+                  <MenuItem value="debater">Debate Partner</MenuItem>
+                  <MenuItem value="philosopher">Philosophical Guide</MenuItem>
+                  <MenuItem value="mentor">Life Mentor</MenuItem>
+                  <MenuItem value="scientist">Scientific Expert</MenuItem>
+                  <MenuItem value="historian">Historical Guide</MenuItem>
+                  <MenuItem value="critic">Critical Analyst</MenuItem>
+                  <MenuItem value="custom">Custom Persona</MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Custom System Message Input */}
+              {showCustomMessage && (
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={customSystemMessage}
+                  onChange={onCustomSystemMessageChange}
+                  label="Custom System Message"
+                  placeholder="Enter your custom system message here..."
+                  disabled={isStreaming}
+                  sx={{ mb: 2 }}
+                />
+              )}
 
               {/* Provider Selection */}
               <FormControl fullWidth sx={{ mb: 2 }}>
@@ -411,56 +467,233 @@ const Sidebar = ({
           </Button>
           <Collapse in={showActions}>
             <Box p={2}>
-              <List>
-                <ListItem disablePadding>
-                  <ListItemButton onClick={onRetry} disabled={isStreaming || !isConnected}>
-                    <ListItemIcon>
-                      <RefreshIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Retry Last Response" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton onClick={onNewChat} disabled={isStreaming || !isConnected}>
-                    <ListItemIcon>
-                      <AddIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="New Chat" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton onClick={onClearChat} disabled={isStreaming}>
-                    <ListItemIcon>
-                      <DeleteIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Clear Chat" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton onClick={onSaveChat} disabled={isStreaming}>
-                    <ListItemIcon>
-                      <SaveIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Save Chat" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton onClick={onLoadChat} disabled={isStreaming}>
-                    <ListItemIcon>
-                      <UploadIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Load Chat" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton onClick={onExportChat} disabled={isStreaming}>
-                    <ListItemIcon>
-                      <DownloadIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Export Chat" />
-                  </ListItemButton>
-                </ListItem>
-              </List>
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(3, 1fr)', 
+                gap: 1 
+              }}>
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    p: 1,
+                    borderRadius: 1,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    }
+                  }}
+                >
+                  <IconButton 
+                    onClick={onRetry} 
+                    disabled={isStreaming || !isConnected}
+                    title="Retry Last Response"
+                    aria-label="Retry Last Response"
+                    size="medium"
+                  >
+                    <RefreshIcon />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      mt: 0.5, 
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                      '.MuiBox-root:hover &': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    Retry
+                  </Typography>
+                </Box>
+                
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    p: 1,
+                    borderRadius: 1,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    }
+                  }}
+                >
+                  <IconButton 
+                    onClick={onNewChat} 
+                    disabled={isStreaming || !isConnected}
+                    title="New Chat"
+                    aria-label="New Chat"
+                    size="medium"
+                  >
+                    <AddIcon />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      mt: 0.5, 
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                      '.MuiBox-root:hover &': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    New
+                  </Typography>
+                </Box>
+                
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    p: 1,
+                    borderRadius: 1,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    }
+                  }}
+                >
+                  <IconButton 
+                    onClick={onClearChat} 
+                    disabled={isStreaming}
+                    title="Clear Chat"
+                    aria-label="Clear Chat"
+                    size="medium"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      mt: 0.5, 
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                      '.MuiBox-root:hover &': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    Clear
+                  </Typography>
+                </Box>
+                
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    p: 1,
+                    borderRadius: 1,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    }
+                  }}
+                >
+                  <IconButton 
+                    onClick={onSaveChat} 
+                    disabled={isStreaming}
+                    title="Save Chat"
+                    aria-label="Save Chat"
+                    size="medium"
+                  >
+                    <SaveIcon />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      mt: 0.5, 
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                      '.MuiBox-root:hover &': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    Save
+                  </Typography>
+                </Box>
+                
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    p: 1,
+                    borderRadius: 1,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    }
+                  }}
+                >
+                  <IconButton 
+                    onClick={onLoadChat} 
+                    disabled={isStreaming}
+                    title="Load Chat"
+                    aria-label="Load Chat"
+                    size="medium"
+                  >
+                    <UploadIcon />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      mt: 0.5, 
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                      '.MuiBox-root:hover &': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    Load
+                  </Typography>
+                </Box>
+                
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    p: 1,
+                    borderRadius: 1,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    }
+                  }}
+                >
+                  <IconButton 
+                    onClick={onExportChat} 
+                    disabled={isStreaming}
+                    title="Export Chat"
+                    aria-label="Export Chat"
+                    size="medium"
+                  >
+                    <DownloadIcon />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      mt: 0.5, 
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                      '.MuiBox-root:hover &': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    Export
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
           </Collapse>
         </Box>
