@@ -40,7 +40,10 @@ import {
   Info as InfoIcon,
   Warning as WarningIcon,
   ArrowBack as ArrowBackIcon,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  ChatBubble as ChatIcon,
+  Api as ApiIcon,
+  ChatBubbleOutline as ChatBubbleOutlineIcon
 } from '@mui/icons-material';
 
 const Sidebar = ({
@@ -70,8 +73,8 @@ const Sidebar = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [showSettings, setShowSettings] = useState(true);
-  const [showActions, setShowActions] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   
   // Function to get provider display name and color
   const getProviderInfo = (providerName) => {
@@ -232,9 +235,21 @@ const Sidebar = ({
               <MenuIcon />
             </IconButton>
           )}
-          <Typography variant="h6" component="div">
-            Settings
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <ChatIcon 
+              color="primary" 
+              sx={{ mr: 1, fontSize: '1.5rem' }} 
+            />
+            <Typography variant="h6" component="div" sx={{ 
+              fontWeight: 'bold',
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              Chat-MM
+            </Typography>
+          </Box>
         </Box>
         
         {/* Current provider badge */}
@@ -266,199 +281,57 @@ const Sidebar = ({
           }
         }
       }}>
-        {/* Chat Actions Section */}
-        <Box sx={{ mb: 3 }}>
-          <ListItemButton 
-            onClick={() => setShowActions(!showActions)}
-            sx={{
-              borderRadius: 1,
-              mb: 1,
-              backgroundColor: showActions 
-                ? alpha(theme.palette.primary.main, 0.08)
-                : 'transparent',
-            }}
-          >
-            <ListItemIcon>
-              <InfoIcon color="primary" />
-            </ListItemIcon>
-            <ListItemText 
-              primary="Chat Actions" 
-              primaryTypographyProps={{ fontWeight: 600 }}
-            />
-            {showActions ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </ListItemButton>
-          
-          <Collapse in={showActions} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              <ListItem 
-                sx={{ 
-                  pt: 0.5, 
-                  pb: 0.5, 
-                  pl: 2, 
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.08)
-                  },
-                }}
-              >
-                <Button
-                  startIcon={<RefreshIcon />}
-                  onClick={onRetry}
-                  disabled={isStreaming || !isConnected}
-                  fullWidth
-                  sx={{ justifyContent: 'flex-start' }}
-                >
-                  Retry Last Response
-                </Button>
-              </ListItem>
-              
-              <ListItem 
-                sx={{ 
-                  pt: 0.5, 
-                  pb: 0.5, 
-                  pl: 2, 
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.08)
-                  },
-                }}
-              >
-                <Button
-                  startIcon={<AddIcon />}
-                  onClick={onNewChat}
-                  disabled={isStreaming || !isConnected}
-                  fullWidth
-                  sx={{ justifyContent: 'flex-start' }}
-                >
-                  New Chat
-                </Button>
-              </ListItem>
-              
-              <ListItem 
-                sx={{ 
-                  pt: 0.5, 
-                  pb: 0.5, 
-                  pl: 2, 
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.08)
-                  },
-                }}
-              >
-                <Button
-                  startIcon={<DeleteIcon />}
-                  onClick={onClearChat}
-                  disabled={isStreaming}
-                  fullWidth
-                  sx={{ justifyContent: 'flex-start' }}
-                >
-                  Clear Chat
-                </Button>
-              </ListItem>
-              
-              <ListItem 
-                sx={{ 
-                  pt: 0.5, 
-                  pb: 0.5, 
-                  pl: 2, 
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.08)
-                  },
-                }}
-              >
-                <Button
-                  startIcon={<SaveIcon />}
-                  onClick={onSaveChat}
-                  disabled={isStreaming}
-                  fullWidth
-                  sx={{ justifyContent: 'flex-start' }}
-                >
-                  Save Chat
-                </Button>
-              </ListItem>
-              
-              <ListItem 
-                sx={{ 
-                  pt: 0.5, 
-                  pb: 0.5, 
-                  pl: 2, 
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.08)
-                  },
-                }}
-              >
-                <Button
-                  startIcon={<UploadIcon />}
-                  onClick={onLoadChat}
-                  disabled={isStreaming}
-                  fullWidth
-                  sx={{ justifyContent: 'flex-start' }}
-                >
-                  Load Chat
-                </Button>
-              </ListItem>
-              
-              <ListItem 
-                sx={{ 
-                  pt: 0.5, 
-                  pb: 0.5, 
-                  pl: 2, 
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.08)
-                  },
-                }}
-              >
-                <Button
-                  startIcon={<DownloadIcon />}
-                  onClick={onExportChat}
-                  disabled={isStreaming}
-                  fullWidth
-                  sx={{ justifyContent: 'flex-start' }}
-                >
-                  Export Chat
-                </Button>
-              </ListItem>
-            </List>
-          </Collapse>
-        </Box>
-        
-        {/* Model Settings Section */}
-        <Box sx={{ mb: 3 }}>
-          <ListItemButton 
+        {/* Settings Section */}
+        <Box 
+          component="div" 
+          sx={{ 
+            width: '100%', 
+            mb: 1,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            pb: 1
+          }}
+        >
+          <Button
             onClick={() => setShowSettings(!showSettings)}
-            sx={{
-              borderRadius: 1,
-              mb: 1,
-              backgroundColor: showSettings 
-                ? alpha(theme.palette.primary.main, 0.08)
-                : 'transparent',
+            startIcon={<SettingsIcon />}
+            endIcon={showSettings ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            fullWidth
+            sx={{ 
+              justifyContent: 'flex-start', 
+              color: theme.palette.text.primary,
+              textAlign: 'left',
+              borderRadius: 0
             }}
           >
-            <ListItemIcon>
-              <SettingsIcon color="primary" />
-            </ListItemIcon>
-            <ListItemText 
-              primary="Model Settings" 
-              primaryTypographyProps={{ fontWeight: 600 }}
-            />
-            {showSettings ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </ListItemButton>
-          
-          <Collapse in={showSettings} timeout="auto" unmountOnExit>
-            <Box sx={{ px: 2, pt: 1, pb: 2 }}>
-              {renderWarning()}
-              
-              <FormControl fullWidth margin="normal" size="small">
-                <InputLabel id="provider-label">Provider</InputLabel>
+            <Typography sx={{ fontWeight: 'bold' }}>Settings</Typography>
+          </Button>
+          <Collapse in={showSettings}>
+            <Box p={2}>
+              {/* Mode Selection */}
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id="mode-select-label">Mode</InputLabel>
                 <Select
-                  labelId="provider-label"
+                  labelId="mode-select-label"
+                  id="mode-select"
+                  value={mode}
+                  onChange={onModeChange}
+                  label="Mode"
+                  disabled={isStreaming}
+                >
+                  <MenuItem value="llm">LLM Chat</MenuItem>
+                  <MenuItem value="vision">Vision (Image Support)</MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Provider Selection */}
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id="provider-select-label">Provider</InputLabel>
+                <Select
+                  labelId="provider-select-label"
                   id="provider-select"
                   value={provider}
-                  label="Provider"
                   onChange={onProviderChange}
+                  label="Provider"
                   disabled={isStreaming}
                 >
                   {Object.keys(availableModels).map((p) => {
@@ -481,17 +354,20 @@ const Sidebar = ({
                     );
                   })}
                 </Select>
+                {renderWarning()}
               </FormControl>
               
-              <FormControl fullWidth margin="normal" size="small">
-                <InputLabel id="model-label">Model</InputLabel>
+              {/* Model Selection */}
+              <FormControl fullWidth>
+                <InputLabel id="model-select-label">Model</InputLabel>
                 <Select
-                  labelId="model-label"
+                  labelId="model-select-label"
                   id="model-select"
                   value={modelId}
-                  label="Model"
                   onChange={onModelChange}
+                  label="Model"
                   disabled={isStreaming || !availableModels[provider] || availableModels[provider].length === 0}
+                  error={!availableModels[provider]?.some(model => model.id === modelId)}
                 >
                   {availableModels[provider]?.map((model) => (
                     <MenuItem key={model.id} value={model.id}>
@@ -505,21 +381,86 @@ const Sidebar = ({
                   </FormHelperText>
                 )}
               </FormControl>
-              
-              <FormControl fullWidth margin="normal" size="small">
-                <InputLabel id="mode-label">Mode</InputLabel>
-                <Select
-                  labelId="mode-label"
-                  id="mode-select"
-                  value={mode}
-                  label="Mode"
-                  onChange={onModeChange}
-                  disabled={isStreaming}
-                >
-                  <MenuItem value="llm">LLM Chat</MenuItem>
-                  <MenuItem value="vision">Vision (Image Support)</MenuItem>
-                </Select>
-              </FormControl>
+            </Box>
+          </Collapse>
+        </Box>
+        
+        {/* Chat Actions Section */}
+        <Box 
+          component="div" 
+          sx={{ 
+            width: '100%', 
+            mb: 1,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            pb: 1
+          }}
+        >
+          <Button
+            onClick={() => setShowActions(!showActions)}
+            startIcon={<ChatBubbleOutlineIcon />}
+            endIcon={showActions ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            fullWidth
+            sx={{ 
+              justifyContent: 'flex-start', 
+              color: theme.palette.text.primary,
+              textAlign: 'left',
+              borderRadius: 0
+            }}
+          >
+            <Typography sx={{ fontWeight: 'bold' }}>Chat Actions</Typography>
+          </Button>
+          <Collapse in={showActions}>
+            <Box p={2}>
+              <List>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={onRetry} disabled={isStreaming || !isConnected}>
+                    <ListItemIcon>
+                      <RefreshIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Retry Last Response" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={onNewChat} disabled={isStreaming || !isConnected}>
+                    <ListItemIcon>
+                      <AddIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="New Chat" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={onClearChat} disabled={isStreaming}>
+                    <ListItemIcon>
+                      <DeleteIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Clear Chat" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={onSaveChat} disabled={isStreaming}>
+                    <ListItemIcon>
+                      <SaveIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Save Chat" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={onLoadChat} disabled={isStreaming}>
+                    <ListItemIcon>
+                      <UploadIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Load Chat" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={onExportChat} disabled={isStreaming}>
+                    <ListItemIcon>
+                      <DownloadIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Export Chat" />
+                  </ListItemButton>
+                </ListItem>
+              </List>
             </Box>
           </Collapse>
         </Box>
