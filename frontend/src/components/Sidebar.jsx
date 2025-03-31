@@ -80,7 +80,7 @@ const Sidebar = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [showSettings, setShowSettings] = useState(false);
   const [showActions, setShowActions] = useState(false);
-  const [showCustomMessage, setShowCustomMessage] = useState(false);
+  const [showCustomMessage, setShowCustomMessage] = useState(persona === 'custom');
   
   // Function to get provider display name and color
   const getProviderInfo = (providerName) => {
@@ -340,7 +340,7 @@ const Sidebar = ({
                   id="persona-select"
                   value={persona}
                   onChange={(e) => {
-                    onPersonaChange(e);
+                    onPersonaChange(e.target.value);
                     setShowCustomMessage(e.target.value === 'custom');
                   }}
                   label="Persona"
@@ -371,7 +371,7 @@ const Sidebar = ({
                   multiline
                   rows={4}
                   value={customSystemMessage}
-                  onChange={onCustomSystemMessageChange}
+                  onChange={(e) => onCustomSystemMessageChange(e.target.value)}
                   label="Custom System Message"
                   placeholder="Enter your custom system message here..."
                   disabled={isStreaming}

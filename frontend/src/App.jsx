@@ -264,6 +264,8 @@ function AppContent() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState(null);
   const [responseMetadata, setResponseMetadata] = useState(null);
+  const [persona, setPersona] = useState('default');
+  const [customSystemMessage, setCustomSystemMessage] = useState('');
   
   const { socket, isConnected, sendMessage } = useSocket();
   const isMobile = useMediaQuery('(max-width:900px)');
@@ -465,6 +467,14 @@ function AppContent() {
     setError(null);
   }, []);
 
+  const handlePersonaChange = useCallback((value) => {
+    setPersona(value);
+  }, []);
+
+  const handleCustomSystemMessageChange = useCallback((value) => {
+    setCustomSystemMessage(value);
+  }, []);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -500,6 +510,10 @@ function AppContent() {
           isConnected={isConnected}
           sidebarWidth={sidebarWidth}
           toggleSidebar={toggleSidebar}
+          persona={persona}
+          onPersonaChange={handlePersonaChange}
+          customSystemMessage={customSystemMessage}
+          onCustomSystemMessageChange={handleCustomSystemMessageChange}
         />
         
         {/* Main content */}
