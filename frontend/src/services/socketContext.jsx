@@ -60,10 +60,44 @@ export const SocketProvider = ({ children }) => {
     };
   }, []);
 
+  const sendMessage = (data) => {
+    if (!socket || !isConnected) {
+      console.error('Cannot send message: Socket not connected');
+      return false;
+    }
+    
+    console.log('Sending message to server:', data);
+    
+    try {
+      // Force specific format for the message to ensure backend compatibility
+      const messageToSend = {
+        type: data.type || 'message',
+        content: data.content,
+        provider: data.provider,
+        model: data.model,
+        mode: data.mode
+      };
+      
+      // Emit the message on the socket
+      socket.emit('message', messageToSend);
+      
+      // Set up a one-time listener for acknowledgment (for debugging)
+      socket.once('ack', (response) => {
+        console.log('Message acknowledged by server:', response);
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      return false;
+    }
+  };
+
   const value = {
     socket,
     isConnected,
     connectionError,
+    sendMessage,
   };
 
   return (

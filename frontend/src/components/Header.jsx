@@ -5,205 +5,181 @@ import {
   Typography,
   IconButton,
   Box,
-  useTheme,
-  alpha,
-  Button,
-  Chip,
   Tooltip,
   useMediaQuery,
+  Chip,
+  alpha,
   Avatar,
-  Badge
+  Button,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   Menu as MenuIcon,
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
-  GitHub as GitHubIcon,
-  Info as InfoIcon,
-  CloudDone as CloudIcon,
-  Psychology as AIIcon,
-  SmartToy as RobotIcon,
   WifiOff as DisconnectedIcon,
-  SignalWifi4Bar as ConnectedIcon
+  SignalWifi4Bar as ConnectedIcon,
+  Psychology as AIIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 
-const Header = ({ 
-  toggleSidebar, 
-  darkMode, 
-  toggleDarkMode, 
-  isConnected = true,
-  onToggleSidebar
-}) => {
+const Header = ({ darkMode, toggleDarkMode, onToggleSidebar, isConnected }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+
   return (
     <AppBar 
       position="sticky" 
       color="inherit" 
       elevation={0}
-      sx={{
+      sx={{ 
         borderBottom: `1px solid ${theme.palette.divider}`,
-        bgcolor: alpha(theme.palette.background.paper, 0.7),
-        backdropFilter: 'blur(10px)',
+        backdropFilter: 'blur(12px)',
+        backgroundColor: alpha(theme.palette.background.paper, 0.8),
         zIndex: theme.zIndex.drawer + 1,
       }}
     >
-      <Toolbar 
-        sx={{ 
-          minHeight: { xs: 56, sm: 64 },
-          justifyContent: 'space-between',
-          px: { xs: 1, sm: 2 },
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {!isMobile && (
-            <IconButton 
-              color="inherit" 
-              edge="start" 
-              onClick={onToggleSidebar}
-              sx={{ mr: 1 }}
-            >
-              <MenuIcon />
-            </IconButton>
-          )}
-          
-          <Avatar
-            sx={{
-              width: 36,
-              height: 36,
-              mr: 1.5,
-              bgcolor: theme.palette.primary.main,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
-            }}
-          >
-            <RobotIcon fontSize="small" />
-          </Avatar>
-          
-          <Typography 
-            variant="h6" 
-            component="div" 
-            color="primary"
-            fontWeight="700"
-            sx={{ 
-              display: 'flex',
-              alignItems: 'center',
-              letterSpacing: 0.5,
-              fontSize: { xs: '1.1rem', sm: '1.3rem' },
-              mr: 1
-            }}
-          >
-            Chat-MM
-            <Chip
-              size="small"
-              label="BETA"
-              color="secondary"
-              sx={{ 
-                ml: 1, 
-                height: 20, 
-                fontSize: '0.6rem',
-                fontWeight: 'bold',
-                '& .MuiChip-label': { px: 0.8 }
-              }}
-            />
-          </Typography>
-          
-          {!isMobile && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                ml: 1,
-                fontSize: '0.85rem',
-                fontWeight: 400,
-                opacity: 0.8,
-              }}
-            >
-              Multimodal Chat Assistant
-            </Typography>
-          )}
-        </Box>
+      <Toolbar sx={{ minHeight: { xs: 56, sm: 64 }, px: { xs: 1.5, sm: 2.5 } }}>
+        <IconButton
+          edge="start"
+          color="inherit"
+          aria-label="open settings"
+          onClick={onToggleSidebar}
+          sx={{ 
+            mr: 1.5,
+            backgroundColor: alpha(theme.palette.primary.main, 0.08),
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.primary.main, 0.15),
+            }
+          }}
+        >
+          <MenuIcon />
+        </IconButton>
         
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {isConnected && (
-            <Tooltip title="Connected to backend">
-              <Badge
-                variant="dot"
-                color="success"
-                overlap="circular"
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                sx={{ mr: 1.5 }}
-              >
-                <CloudIcon fontSize="small" color="action" />
-              </Badge>
-            </Tooltip>
-          )}
-          
-          <Tooltip title={isConnected ? "Connected to server" : "Disconnected from server"}>
-            <IconButton 
-              size="small" 
-              color={isConnected ? "success" : "error"}
-              sx={{
-                border: `1px solid ${isConnected ? theme.palette.success.main : theme.palette.error.main}`,
-                opacity: 0.8,
-                mr: 1,
-                '&:hover': {
-                  backgroundColor: alpha(
-                    isConnected ? theme.palette.success.main : theme.palette.error.main,
-                    0.1
-                  ),
-                },
+        <Box 
+          sx={{ 
+            display: 'flex',
+            alignItems: 'center',
+            flexGrow: 1,
+          }}
+        >
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1.5,
+              mr: 2,
+            }}
+          >
+            <Avatar 
+              sx={{ 
+                width: 36, 
+                height: 36, 
+                backgroundColor: alpha(theme.palette.primary.main, 0.9),
+                color: theme.palette.primary.contrastText,
+                fontWeight: 'bold',
+                fontSize: '1rem',
               }}
             >
-              {isConnected ? <ConnectedIcon fontSize="small" /> : <DisconnectedIcon fontSize="small" />}
-            </IconButton>
+              C
+            </Avatar>
+
+            <Box>
+              <Typography 
+                variant="h6" 
+                component="div" 
+                sx={{ 
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  lineHeight: 1.2,
+                }}
+              >
+                Chat-MM
+                {!isMobile && (
+                  <Chip
+                    size="small"
+                    label="Beta"
+                    color="primary"
+                    variant="outlined"
+                    sx={{ ml: 0.5, height: 20, fontSize: '0.65rem' }}
+                  />
+                )}
+              </Typography>
+              {!isMobile && (
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{ display: 'block', mt: -0.2 }}
+                >
+                  Multi-Model Chat
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* Connection status indicator */}
+          <Tooltip 
+            title={isConnected ? "Connected to server" : "Disconnected from server"}
+            arrow
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                px: 1.2,
+                py: 0.6,
+                borderRadius: 5,
+                backgroundColor: alpha(
+                  isConnected ? theme.palette.success.main : theme.palette.error.main, 
+                  0.1
+                ),
+                border: `1px solid ${alpha(
+                  isConnected ? theme.palette.success.main : theme.palette.error.main,
+                  0.4
+                )}`,
+                color: isConnected ? theme.palette.success.main : theme.palette.error.main,
+                mr: 1,
+              }}
+            >
+              <Box 
+                component="span" 
+                sx={{ 
+                  display: { xs: 'none', sm: 'block' },
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  mr: 0.5 
+                }}
+              >
+                {isConnected ? "Connected" : "Offline"}
+              </Box>
+              {isConnected ? 
+                <ConnectedIcon fontSize="small" /> : 
+                <DisconnectedIcon fontSize="small" />
+              }
+            </Box>
           </Tooltip>
           
-          <Tooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
+          {/* Dark/Light mode toggle */}
+          <Tooltip 
+            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            arrow
+          >
             <IconButton 
               onClick={toggleDarkMode} 
               color="inherit"
               sx={{ 
-                mr: { xs: 0.5, sm: 1 },
-                bgcolor: darkMode 
-                  ? alpha(theme.palette.primary.main, 0.1) 
-                  : 'transparent' 
+                borderRadius: 2,
+                backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                }
               }}
             >
               {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
-            </IconButton>
-          </Tooltip>
-          
-          <Tooltip title="View on GitHub">
-            <IconButton 
-              component="a" 
-              href="https://github.com/yourusername/Chat-MM" 
-              target="_blank"
-              aria-label="GitHub repository"
-              color="inherit"
-              sx={{ 
-                mr: { xs: 0.5, sm: 1 },
-                transition: 'transform 0.2s',
-                '&:hover': { transform: 'rotate(5deg)' }
-              }}
-            >
-              <GitHubIcon />
-            </IconButton>
-          </Tooltip>
-          
-          <Tooltip title="About">
-            <IconButton
-              color="inherit"
-              aria-label="About this application"
-              sx={{ 
-                mr: { xs: 0.5, sm: 1 },
-                display: { xs: 'none', sm: 'flex' }
-              }}
-            >
-              <InfoIcon />
             </IconButton>
           </Tooltip>
         </Box>

@@ -1,338 +1,481 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Box, CssBaseline, Snackbar, Alert } from '@mui/material';
-import { ThemeProvider } from '@mui/material/styles';
-import Header from './components/Header';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ThemeProvider, createTheme, alpha } from '@mui/material/styles';
+import { CssBaseline, Box, Snackbar, Alert, useMediaQuery } from '@mui/material';
 import ChatWindow from './components/ChatWindow';
-import { SocketProvider, useSocket } from './services/socketContext';
-import { createTheme } from '@mui/material/styles';
 import Sidebar from './components/Sidebar';
+import { SocketProvider, useSocket } from './services/socketContext';
+import { availableModels, providerWarnings } from './config/models';
 
-// Create AppContent component that has access to socket context
-const AppContent = () => {
-  const { socket, isConnected } = useSocket();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+// Define sidebar width for consistency
+const sidebarWidth = { xs: 280, sm: 350 };
+
+// Improved color palettes
+const lightTheme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#3f51b5', // Indigo
+      light: '#757de8',
+      dark: '#002984',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#f50057', // Pink
+      light: '#ff5983',
+      dark: '#bb002f',
+      contrastText: '#ffffff',
+    },
+    background: {
+      default: '#f7f9fc',
+      paper: '#ffffff',
+    },
+    text: {
+      primary: '#2d3748',
+      secondary: '#4a5568',
+    },
+    success: {
+      main: '#2e7d32',
+      light: '#4caf50',
+      dark: '#1b5e20',
+    },
+    info: {
+      main: '#0288d1',
+      light: '#03a9f4',
+      dark: '#01579b',
+    },
+    warning: {
+      main: '#ed6c02',
+      light: '#ff9800',
+      dark: '#e65100',
+    },
+    error: {
+      main: '#d32f2f',
+      light: '#ef5350',
+      dark: '#c62828',
+    },
+    divider: 'rgba(0, 0, 0, 0.08)',
+  },
+  typography: {
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    h1: {
+      fontWeight: 700,
+    },
+    h2: {
+      fontWeight: 700,
+    },
+    h3: {
+      fontWeight: 700,
+    },
+    h4: {
+      fontWeight: 600,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+    button: {
+      fontWeight: 600,
+      textTransform: 'none',
+    },
+  },
+  shape: {
+    borderRadius: 12,
+  },
+  shadows: [
+    'none',
+    '0px 2px 1px -1px rgba(0,0,0,0.05),0px 1px 1px 0px rgba(0,0,0,0.03),0px 1px 3px 0px rgba(0,0,0,0.05)',
+    '0px 3px 3px -2px rgba(0,0,0,0.06),0px 3px 4px 0px rgba(0,0,0,0.04),0px 1px 8px 0px rgba(0,0,0,0.06)',
+    '0px 3px 4px -2px rgba(0,0,0,0.07),0px 4px 5px 0px rgba(0,0,0,0.05),0px 1px 10px 0px rgba(0,0,0,0.06)',
+    '0px 4px 5px -2px rgba(0,0,0,0.07),0px 7px 10px 1px rgba(0,0,0,0.05),0px 2px 16px 1px rgba(0,0,0,0.06)',
+    // Keep the rest of the default shadows
+  ],
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          scrollbarWidth: 'thin',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'rgba(0,0,0,0.15)',
+            borderRadius: '4px',
+            '&:hover': {
+              backgroundColor: 'rgba(0,0,0,0.25)',
+            }
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'transparent',
+          },
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+        },
+      },
+    },
+  },
+});
+
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#738adb', // Lighter indigo for dark mode
+      light: '#9fa8da',
+      dark: '#3949ab',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#ff4081', // Brighter pink for dark mode
+      light: '#ff79b0',
+      dark: '#c60055',
+      contrastText: '#ffffff',
+    },
+    background: {
+      default: '#111827', // Deep blue-gray
+      paper: '#1e293b', // Lighter blue-gray
+    },
+    text: {
+      primary: '#f1f5f9',
+      secondary: '#cbd5e1',
+    },
+    success: {
+      main: '#4caf50',
+      light: '#81c784',
+      dark: '#388e3c',
+    },
+    info: {
+      main: '#29b6f6',
+      light: '#4fc3f7',
+      dark: '#0288d1',
+    },
+    warning: {
+      main: '#ffa726',
+      light: '#ffb74d',
+      dark: '#f57c00',
+    },
+    error: {
+      main: '#ef5350',
+      light: '#e57373',
+      dark: '#d32f2f',
+    },
+    divider: 'rgba(255, 255, 255, 0.08)',
+  },
+  typography: {
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    h1: {
+      fontWeight: 700,
+    },
+    h2: {
+      fontWeight: 700,
+    },
+    h3: {
+      fontWeight: 700,
+    },
+    h4: {
+      fontWeight: 600,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+    button: {
+      fontWeight: 600,
+      textTransform: 'none',
+    },
+  },
+  shape: {
+    borderRadius: 12,
+  },
+  shadows: [
+    'none',
+    '0px 2px 1px -1px rgba(0,0,0,0.2),0px 1px 1px 0px rgba(0,0,0,0.14),0px 1px 3px 0px rgba(0,0,0,0.12)',
+    '0px 3px 3px -2px rgba(0,0,0,0.2),0px 3px 4px 0px rgba(0,0,0,0.14),0px 1px 8px 0px rgba(0,0,0,0.12)',
+    '0px 3px 4px -2px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)',
+    '0px 4px 5px -2px rgba(0,0,0,0.2),0px 7px 10px 1px rgba(0,0,0,0.14),0px 2px 16px 1px rgba(0,0,0,0.12)',
+    // Keep the rest of the default shadows
+  ],
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          scrollbarWidth: 'thin',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            borderRadius: '4px',
+            '&:hover': {
+              backgroundColor: 'rgba(255,255,255,0.25)',
+            }
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'transparent',
+          },
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+        },
+      },
+    },
+  },
+});
+
+function AppContent() {
   const [darkMode, setDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('darkMode');
-    return savedMode ? JSON.parse(savedMode) : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return savedMode ? JSON.parse(savedMode) : false;
   });
   const [messages, setMessages] = useState([]);
-  const [userInput, setUserInput] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [availableModels, setAvailableModels] = useState({});
-  const [provider, setProvider] = useState('openai');
+  const [inputValue, setInputValue] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [provider, setProvider] = useState('groq');
   const [modelId, setModelId] = useState('');
   const [mode, setMode] = useState('llm');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [error, setError] = useState(null);
   const [responseMetadata, setResponseMetadata] = useState(null);
-  const [providerWarnings, setProviderWarnings] = useState({});
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-  const inputRef = useRef(null);
+  
+  const { socket, isConnected, sendMessage } = useSocket();
+  const isMobile = useMediaQuery('(max-width:900px)');
 
-  // Toggle dark/light mode
-  const toggleDarkMode = () => {
-    setDarkMode(prev => {
-      const newMode = !prev;
-      localStorage.setItem('darkMode', JSON.stringify(newMode));
-      return newMode;
-    });
-  };
-
-  // Create theme based on dark mode state
-  const theme = React.useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: darkMode ? 'dark' : 'light',
-          primary: {
-            main: '#5865F2',
-          },
-          secondary: {
-            main: '#EB459E',
-          },
-          background: {
-            default: darkMode ? '#1e1e1e' : '#f5f5f5',
-            paper: darkMode ? '#252525' : '#ffffff',
-          },
-        },
-        typography: {
-          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif",
-        },
-        shape: {
-          borderRadius: 10,
-        },
-        components: {
-          MuiCssBaseline: {
-            styleOverrides: {
-              body: {
-                scrollbarWidth: 'thin',
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                  height: '8px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  backgroundColor: 'transparent',
-                },
-              },
-            },
-          },
-        },
-      }),
-    [darkMode]
-  );
-
-  // Fetch available models
+  // Theme
+  const theme = darkMode ? darkTheme : lightTheme;
+  
+  // Effect to close sidebar on mobile
   useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const response = await fetch('/api/chat/models');
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        const data = await response.json();
-        setAvailableModels(data);
-        // Set default model for the current provider
-        if (data[provider] && data[provider].length > 0) {
-          setModelId(data[provider][0].id);
-        }
-      } catch (error) {
-        console.error('Error fetching models:', error);
-        setSnackbar({
-          open: true,
-          message: 'Failed to load available models',
-          severity: 'error'
-        });
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]);
 
-        // Set some fallback models
-        const fallbackModels = {
-          'openai': [
-            {'id': 'gpt-4o', 'name': 'GPT-4o', 'description': 'Advanced model'},
-            {'id': 'gpt-4o-mini', 'name': 'GPT-4o Mini', 'description': 'Fast model'},
-          ],
-          'groq': [
-            {'id': 'llama-3.1-8b-instant', 'name': 'Llama 3.1 8B', 'description': 'Fast model'},
-            {'id': 'llama-3.3-70b-versatile', 'name': 'Llama 3.3 70B', 'description': 'Large model'},
-          ]
-        };
-        
-        setAvailableModels(fallbackModels);
-        setModelId(fallbackModels[provider]?.[0]?.id || 'gpt-4o');
-      }
-    };
-    
-    fetchModels();
-  }, [provider]);
+  // Effect to store dark mode setting
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+  }, [darkMode]);
 
-  // Update model when provider changes
+  // Effect to set modelId when provider changes
   useEffect(() => {
     if (availableModels[provider] && availableModels[provider].length > 0) {
       setModelId(availableModels[provider][0].id);
+    } else {
+      setModelId('');
     }
-  }, [provider, availableModels]);
+  }, [provider]);
 
-  // Handle incoming messages
+  // Websocket message handler
   useEffect(() => {
     if (!socket) return;
 
-    const handleChatResponse = (data) => {
-      if (data.status === 'streaming') {
+    const handleMessage = (data) => {
+      console.log('Socket message received:', data);
+      if (data.type === 'message') {
+        console.log('Adding new assistant message');
         setMessages(prev => {
-          const lastMsg = prev[prev.length - 1];
-          if (lastMsg && lastMsg.type === 'bot' && isStreaming) {
-            return [
-              ...prev.slice(0, -1),
-              { ...lastMsg, text: lastMsg.text + data.content }
-            ];
+          const newMessages = [...prev, { role: 'assistant', content: data.content }];
+          console.log('Updated messages:', newMessages);
+          return newMessages;
+        });
+        setIsStreaming(false);
+      } else if (data.type === 'stream') {
+        console.log('Streaming content:', data.content);
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.role === 'assistant') {
+            const updatedMessages = [...prev.slice(0, -1)];
+            const updatedMessage = {
+              ...lastMessage,
+              content: lastMessage.content + data.content
+            };
+            updatedMessages.push(updatedMessage);
+            console.log('Updated streaming message:', updatedMessage.content);
+            return updatedMessages;
           } else {
-            setIsStreaming(true);
-            return [...prev, { id: Date.now(), type: 'bot', text: data.content }];
+            const newMessages = [...prev, { role: 'assistant', content: data.content }];
+            console.log('Created new assistant message for stream');
+            return newMessages;
           }
         });
-      } else if (data.status === 'complete') {
+      } else if (data.type === 'metadata') {
+        console.log('Received metadata:', data.content);
+        setResponseMetadata(data.content);
+      } else if (data.type === 'error') {
+        console.error('Received error:', data.content);
+        setError(data.content);
         setIsStreaming(false);
-        // Store response metadata
-        setResponseMetadata({
-          model: getModelName(),
-          time: data.time_taken?.toFixed(2) || null,
-          tokens: data.tokens || null
-        });
-      } else if (data.status === 'error') {
-        setMessages(prev => [
-          ...prev,
-          { id: Date.now(), type: 'error', text: data.error || 'An error occurred' }
-        ]);
+      } else if (data.type === 'done') {
+        console.log('Stream complete');
         setIsStreaming(false);
-        setSnackbar({
-          open: true,
-          message: data.error || 'An error occurred',
-          severity: 'error'
-        });
       }
     };
 
-    const handleSystemMessage = (data) => {
-      if (data.status === 'warning' && data.content.includes('API key')) {
-        setProviderWarnings(prev => ({ ...prev, [provider]: true }));
-        setSnackbar({
-          open: true,
-          message: data.content,
-          severity: 'warning'
-        });
-      }
-    };
-
-    socket.on('chat_response', handleChatResponse);
-    socket.on('system_message', handleSystemMessage);
+    socket.on('message', handleMessage);
+    console.log('Socket message handler registered');
 
     return () => {
-      socket.off('chat_response', handleChatResponse);
-      socket.off('system_message', handleSystemMessage);
+      socket.off('message', handleMessage);
     };
-  }, [socket, isStreaming, provider, mode]);
+  }, [socket]);
 
-  // Handle input change
-  const handleInputChange = (e) => {
-    setUserInput(e.target.value);
-  };
+  const handleSendMessage = useCallback(() => {
+    if (!inputValue.trim() || !isConnected || isStreaming) return;
 
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!userInput.trim() || !isConnected || isStreaming) return;
+    const userMessage = {
+      role: 'user',
+      content: inputValue
+    };
 
-    // Add user message
-    const userMessage = { id: Date.now(), type: 'user', text: userInput.trim() };
     setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setIsStreaming(true);
 
-    // Determine RAG and Web Search settings based on selected mode
-    const use_rag = mode === 'rag_llm' || mode === 'rag_llm_web';
-    const use_web = mode === 'rag_llm_web';
-
-    // Send to server
-    socket.emit('chat_query', {
-      query: userInput.trim(),
-      provider,
-      model_id: modelId,
-      use_web,
-      use_rag
+    sendMessage({
+      type: 'message',
+      content: inputValue,
+      provider: provider,
+      model: modelId,
+      mode: mode
     });
+  }, [inputValue, isConnected, isStreaming, sendMessage, provider, modelId, mode]);
 
-    // Clear input
-    setUserInput('');
-  };
+  const handleRetry = useCallback(() => {
+    if (!isConnected || isStreaming || messages.length === 0) return;
 
-  // Handle clearing chat
-  const handleClearChat = () => {
+    // Find the last user message
+    const lastUserMessageIndex = [...messages].reverse().findIndex(msg => msg.role === 'user');
+    
+    if (lastUserMessageIndex === -1) return;
+    
+    const lastUserMessage = messages[messages.length - 1 - lastUserMessageIndex];
+
+    // Remove all assistant messages after the last user message
+    setMessages(prev => prev.slice(0, messages.length - lastUserMessageIndex));
+    setIsStreaming(true);
+
+    sendMessage({
+      type: 'message',
+      content: lastUserMessage.content,
+      provider: provider,
+      model: modelId,
+      mode: mode
+    });
+  }, [messages, isConnected, isStreaming, sendMessage, provider, modelId, mode]);
+
+  const handleClearChat = useCallback(() => {
     setMessages([]);
     setResponseMetadata(null);
-    setSidebarOpen(false);
-  };
+  }, []);
 
-  // Handle retrying last message
-  const handleRetryLast = () => {
-    if (isStreaming) return;
-    
-    const lastUserMessage = [...messages].reverse().find(msg => msg.type === 'user');
-    if (lastUserMessage) {
-      setUserInput(lastUserMessage.text);
-      setTimeout(() => inputRef.current?.focus(), 0);
+  const handleSaveChat = useCallback(() => {
+    // Future implementation
+    setError('Save chat functionality not implemented yet');
+  }, []);
+
+  const handleExportChat = useCallback(() => {
+    if (messages.length === 0) {
+      setError('No messages to export');
+      return;
     }
-    
-    setSidebarOpen(false);
-  };
 
-  // Handle exporting chat
-  const handleExportChat = () => {
-    if (messages.length === 0) return;
-    
-    // Format the chat for export
-    const formattedChat = messages
-      .filter(msg => msg.type !== 'info')
-      .map(msg => {
-        if (msg.type === 'user') {
-          return `User: ${msg.text}`;
-        } else if (msg.type === 'bot') {
-          return `AI: ${msg.text}`;
-        } else {
-          return `System: ${msg.text}`;
-        }
-      })
-      .join('\n\n');
-    
-    // Add metadata
-    const metadata = `Chat-MM Export\nDate: ${new Date().toLocaleString()}\nModel: ${getProviderName(provider)} ${getModelName()}\nMode: ${mode}\n\n`;
-    const exportText = metadata + formattedChat;
-    
-    // Create and download file
-    const blob = new Blob([exportText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `chat-mm-export-${Date.now()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    setSidebarOpen(false);
-  };
-
-  // Handle new chat
-  const handleNewChat = () => {
-    handleClearChat();
-  };
-
-  // Handle provider change
-  const handleProviderChange = (e) => {
-    setProvider(e.target.value);
-    setSnackbar({ open: false, message: '', severity: 'info' });
-  };
-
-  // Handle model change
-  const handleModelChange = (e) => {
-    setModelId(e.target.value);
-  };
-
-  // Handle mode change
-  const handleModeChange = (e) => {
-    setMode(e.target.value);
-  };
-
-  // Helper functions to get provider and model names
-  const getProviderName = (key) => {
-    const providers = {
-      'openai': 'OpenAI',
-      'cohere': 'Cohere',
-      'huggingface': 'HuggingFace',
-      'groq': 'Groq',
-      'mistral': 'Mistral',
-      'anthropic': 'Anthropic',
-      'xai': 'X AI',
-      'deepseek': 'DeepSeek',
-      'alibaba': 'Alibaba'
+    const exportData = {
+      messages,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        provider,
+        model: modelId,
+        mode
+      }
     };
-    return providers[key] || key;
-  };
 
-  const getModelName = () => {
-    if (!modelId || !availableModels[provider]) return '';
-    
-    const model = availableModels[provider]?.find(m => m.id === modelId);
-    return model ? model.name : modelId;
-  };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `chat-export-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [messages, provider, modelId, mode]);
+
+  const handleLoadChat = useCallback((event) => {
+    // Future implementation
+    setError('Load chat functionality not implemented yet');
+  }, []);
+
+  const handleNewChat = useCallback(() => {
+    if (messages.length > 0) {
+      // Ask for confirmation
+      if (window.confirm('Start a new chat? This will clear your current conversation.')) {
+        handleClearChat();
+      }
+    }
+  }, [messages.length, handleClearChat]);
+
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode(prev => !prev);
+  }, []);
+
+  const handleProviderChange = useCallback((event) => {
+    setProvider(event.target.value);
+  }, []);
+
+  const handleModelChange = useCallback((event) => {
+    setModelId(event.target.value);
+  }, []);
+
+  const handleModeChange = useCallback((event) => {
+    setMode(event.target.value);
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen(prev => !prev);
+  }, []);
+
+  const handleErrorClose = useCallback(() => {
+    setError(null);
+  }, []);
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-        <Header
-          darkMode={darkMode}
-          toggleDarkMode={toggleDarkMode}
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-          isConnected={isConnected}
-        />
+      
+      <Box sx={{ 
+        display: 'flex', 
+        height: '100vh',
+        overflow: 'hidden',
+        backgroundColor: theme.palette.background.default,
+      }}>
+        {/* Sidebar */}
         <Sidebar
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -346,46 +489,69 @@ const AppContent = () => {
           mode={mode}
           onModeChange={handleModeChange}
           onClearChat={handleClearChat}
-          onSaveChat={() => {}}
-          onLoadChat={() => {}}
+          onSaveChat={handleSaveChat}
+          onLoadChat={handleLoadChat}
           onExportChat={handleExportChat}
           onNewChat={handleNewChat}
-          onRetry={handleRetryLast}
+          onRetry={handleRetry}
           isStreaming={isStreaming}
           providerWarnings={providerWarnings}
           responseMetadata={responseMetadata}
           isConnected={isConnected}
+          sidebarWidth={sidebarWidth}
+          toggleSidebar={toggleSidebar}
         />
-        <ChatWindow
-          messages={messages}
-          userInput={userInput}
-          setUserInput={setUserInput}
-          handleInputChange={handleInputChange}
-          handleSubmit={handleSubmit}
-          isStreaming={isStreaming}
-          isConnected={isConnected}
-        />
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={6000}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        
+        {/* Main content */}
+        <Box 
+          sx={{ 
+            flexGrow: 1,
+            width: { xs: '100%', md: sidebarOpen ? `calc(100% - ${sidebarWidth.sm}px)` : '100%' },
+            transition: theme.transitions.create(['margin', 'width'], {
+              easing: theme.transitions.easing.easeOut,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
+            marginLeft: { xs: 0, md: sidebarOpen ? `${sidebarWidth.sm}px` : 0 },
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
         >
-          <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity}>
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
+          {/* Chat window takes up all available space */}
+          <ChatWindow 
+            messages={messages}
+            inputValue={inputValue}
+            setInputValue={setInputValue}
+            onSendMessage={handleSendMessage}
+            isStreaming={isStreaming}
+            isConnected={isConnected}
+            toggleSidebar={toggleSidebar}
+          />
+        </Box>
       </Box>
+      
+      {/* Error messages */}
+      <Snackbar 
+        open={!!error} 
+        autoHideDuration={6000} 
+        onClose={handleErrorClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleErrorClose} severity="error" sx={{ width: '100%' }}>
+          {error}
+        </Alert>
+      </Snackbar>
     </ThemeProvider>
   );
-};
+}
 
-// App component that provides the socket context
-const App = () => {
+function App() {
   return (
     <SocketProvider>
       <AppContent />
     </SocketProvider>
   );
-};
+}
 
 export default App; 
